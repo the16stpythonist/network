@@ -586,7 +586,8 @@ class FormReceiverThread(threading.Thread):
         # The state variables of the Thread and the transmission
         self.running = False
         self.finished = False
-        # The variable for the length
+        # The variable for the length of the appendix to receive
+        self.appendix_length = None
 
     def run(self):
         pass
