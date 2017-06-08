@@ -586,9 +586,21 @@ class FormReceiverThread(threading.Thread):
         # The state variables of the Thread and the transmission
         self.running = False
         self.finished = False
+        # The variable for the length
 
     def run(self):
         pass
+
+    def receive_line(self):
+        """
+        This method will receive a line from the socket, it manages, by using the receive until character method from
+        the socket wrapper object. The timeout of that method is set to be the timeout specified in the attribute of
+        this object, although it has to be noted, that this timeout is used for the reception of every character
+        Returns:
+        The byte string of the line, that was received
+        """
+        line = self.sock_wrap.receive_until_character("\n", 1024, timeout=self.timeout)
+        return line
 
     def send_ack(self):
         """
