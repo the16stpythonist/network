@@ -598,10 +598,33 @@ class FormReceiverThread(threading.Thread):
         pass
 
     def receive_title(self):
-        pass
+        """
+        This method
+        Returns:
 
+        """
+        line = self.receive_line()
+        # Converting the byte string into a regular string
+        if isinstance(line, bytes):
+            self.title = line.decode()
+        elif isinstance(line, str):
+            self.title = str(line)
+        else:
+            raise TypeError("The type of the received title is neitehr string nor bytes!")
 
     def receive_line(self):
+        """
+        This method will receive a line from the socket as a bytes string object and then turn the byte string back
+        into a regular string, assuming the standard encoding
+        Returns:
+        The string line, received from the socket
+        """
+        line_bytes = self.receive_line_bytes()
+        # Turning the bytes string back into a string, assuming the standard encoding
+        line_string = line_bytes.decode()
+        return line_string
+
+    def receive_line_bytes(self):
         """
         This method will receive a line from the socket, it manages, by using the receive until character method from
         the socket wrapper object. The timeout of that method is set to be the timeout specified in the attribute of
@@ -609,8 +632,8 @@ class FormReceiverThread(threading.Thread):
         Returns:
         The byte string of the line, that was received
         """
-        line = self.sock_wrap.receive_until_character("\n", 1024, timeout=self.timeout)
-        return line
+        line_bytes = self.sock_wrap.receive_until_character(b'\n', 1024, timeout=self.timeout)
+        return line_bytes
 
     def send_ack(self):
         """
