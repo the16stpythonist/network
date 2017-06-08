@@ -599,18 +599,13 @@ class FormReceiverThread(threading.Thread):
 
     def receive_title(self):
         """
-        This method
+        This method receives a single line and assigns that line as the title of the form. Because it does so, this
+        method has to be called as the first method when beginning a form transmission.
         Returns:
-
+        void
         """
         line = self.receive_line()
-        # Converting the byte string into a regular string
-        if isinstance(line, bytes):
-            self.title = line.decode()
-        elif isinstance(line, str):
-            self.title = str(line)
-        else:
-            raise TypeError("The type of the received title is neitehr string nor bytes!")
+        self.title = line
 
     def receive_line(self):
         """
