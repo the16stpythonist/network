@@ -588,9 +588,18 @@ class FormReceiverThread(threading.Thread):
         self.finished = False
         # The variable for the length of the appendix to receive
         self.appendix_length = None
+        # All the variables holding the relevant values for the form object
+        self.title = None
+        self.body = None
+        self.appendix = None
+        self.form = None
 
     def run(self):
         pass
+
+    def receive_title(self):
+        pass
+
 
     def receive_line(self):
         """
