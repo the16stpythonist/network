@@ -198,11 +198,23 @@ class TestFormTransmission(unittest.TestCase):
 
     std_separation = "$separation$"
     std_port = 56777
+    std_form = protocol.Form("Title", ["first", "second"], {"a": 1, "b": 2})
+    dummy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    def test_init(self):
-        port = open_port()
-        s = SockGrab(port)
-        s.start()
-        print(s.sockets())
+    def test_adjust(self):
+        separation = "hallo"
+        title = "TITLE"
+        body = ["first", "hallo", "second"]
+        form = protocol.Form(title, body, '')
+        # Double checking the validity function of the Form class
+        self.assertTrue(form.valid)
+        # Testing in case adjust is True if the body string gets modified correctly
+        expected_body = "first\n hallo\nsecond"
+        transmitter = protocol.FormTransmitterThread(self.dummy_socket, form, separation, adjust=True)
+        self.assertEqual(transmitter.form.body, expected_body)
+        # Testing for the exception in case the adjust was turned of
+        with self.assertRaises(ValueError):
+            form = protocol.Form(title, body, '')
+            protocol.FormTransmitterThread(self.dummy_socket, form, separation, adjust=False)
 
 

@@ -412,7 +412,7 @@ class FormTransmitterThread(threading.Thread):
     an exception risen in case one was found
     """
     def __init__(self, sock, form, separation, timeout=10, adjust=True):
-        threading.Thread.__init__()
+        threading.Thread.__init__(self)
         # The form object to be transmitted over the socket connection
         self.form = form
         self.check_form()
@@ -543,7 +543,7 @@ class FormTransmitterThread(threading.Thread):
         form_body_string = self.form.body
         form_body_lines = form_body_string.split("\n")
         for i in range(len(form_body_lines)):
-            if form_body_lines[i][:len(self.separation)] is self.separation:
+            if form_body_lines[i][:len(self.separation)] == self.separation:
                 raise ValueError("There is a collision of the separation string in the form body")
 
     def assemble_separator(self):
@@ -570,7 +570,7 @@ class FormTransmitterThread(threading.Thread):
         form_body_string = self.form.body
         form_body_lines = form_body_string.split("\n")
         for i in range(len(form_body_lines)):
-            if form_body_lines[i] is self.separation:
+            if form_body_lines[i][:len(self.separation)] == self.separation:
                 form_body_lines[i] = " " + form_body_lines[i]
         form_body_string = "\n".join(form_body_lines)
         self.form.body = form_body_string
@@ -579,7 +579,7 @@ class FormTransmitterThread(threading.Thread):
 class FormReceiverThread(threading.Thread):
 
     def __init__(self, sock, separation, timeout=10):
-        threading.Thread.__init__()
+        threading.Thread.__init__(self)
         # The socket and the wrapped socket
         self.sock = sock
         self.sock_wrap = SocketWrapper(self.sock, True)
