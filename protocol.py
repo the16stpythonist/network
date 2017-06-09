@@ -630,6 +630,24 @@ class FormReceiverThread(threading.Thread):
         line_bytes = self.sock_wrap.receive_until_character(b'\n', 1024, timeout=self.timeout)
         return line_bytes
 
+    def ceckup_separation(self, line):
+        """
+        This method checks whether the the passed line string is the separation line, that is meant to separate the
+        body from the appendix and returns the boolean value of that being the case ot not
+        Args:
+            line: The string of the receuved line to check
+
+        Returns:
+        The boolean value of the line being the separation line or not
+        """
+        # The first condition of the line being the separation is it being longer than the sep string alone
+        if len(line) > self.separation:
+            separation_length = len(self.separation)
+            if line[:separation_length] is self.separation:
+                return True
+        # In case one of the condifitions was not given, False is returned
+        return False
+
     def send_ack(self):
         """
         This method simply sends a string with the ack to the transmitting end, wo signal, that the connection is still
