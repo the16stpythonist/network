@@ -608,8 +608,17 @@ class FormReceiverThread(threading.Thread):
         self.title = line
 
     def receive_body(self):
+        """
+        This method will receive the body of the form, by receiving line for line until the separation line has been
+        received. The separation line will then be processed into the length of the appendix and the received lines
+        will be processed into the body string
+        Returns:
+        void
+        """
         is_separation = False
         line_list = []
+        line = None
+        # Receiving new lines from the socket, until the separation line has been received
         while not is_separation:
             line = self.receive_line()
             is_separation = self.checkup_separation(line)
@@ -620,6 +629,8 @@ class FormReceiverThread(threading.Thread):
         self.process_separation(line)
 
         # Assembling the line list into the body string and assigning it to the body
+        body_string = '\n'.join(line_list)
+        self.body = body_string
 
     def receive_line(self):
         """
