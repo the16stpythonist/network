@@ -607,6 +607,20 @@ class FormReceiverThread(threading.Thread):
         line = self.receive_line()
         self.title = line
 
+    def receive_body(self):
+        is_separation = False
+        line_list = []
+        while not is_separation:
+            line = self.receive_line()
+            is_separation = self.checkup_separation(line)
+            if not is_separation:
+                line_list.append(line)
+        # If the while loop exits, that means the separation has been sent and is now the last line that was received
+        # which means the string is still inside the line variable
+        self.process_separation(line)
+
+        # Assembling the line list into the body string and assigning it to the body
+
     def receive_line(self):
         """
         This method will receive a line from the socket as a bytes string object and then turn the byte string back
@@ -630,7 +644,48 @@ class FormReceiverThread(threading.Thread):
         line_bytes = self.sock_wrap.receive_until_character(b'\n', 1024, timeout=self.timeout)
         return line_bytes
 
-    def ceckup_separation(self, line):
+    def process_separation(self, line):
+        """
+        This method will take the separation line, check it for its validity and in case it is correct extract the
+        appendix length from the string and then assign this length to the length attribute of this object
+        Args:
+            line: the string line to be processed for the length of the appendix
+
+        Returns:
+        void
+        """
+        # Checking if this actaully is the separation string line
+        self.check_separation(line)
+        # Removing the actual separation string from the line
+        length_string = line.replace(self.separation, "")
+        length_string.strip()
+        # Turning the string into a number
+        length = int(length_string)
+        # Assigning that length value to the designated attribute of this object
+        self.appendix_length = length
+
+    def check_separation(self, line):
+        """
+        This method checks, whether the passed object is a string and then also checks if that string is actually the
+        separation string by calling the checkup method for the separation string. An exception will be risen in case
+        either one of the conditions is not met.
+        This method is used to assure, that the correct object is being used for further processing
+        Raises:
+            ValueError
+            TypeError
+        Args:
+            line: The string line, which is supposed to be the separation string
+
+        Returns:
+        void
+        """
+        # Raising an error, in case the passed object is not a string or not the separation string
+        if not isinstance(line, str):
+            raise TypeError("The passed line is not even a string")
+        if not self.checkup_separation(line):
+            raise ValueError("The passed line is not the separation string")
+
+    def checkup_separation(self, line):
         """
         This method checks whether the the passed line string is the separation line, that is meant to separate the
         body from the appendix and returns the boolean value of that being the case ot not
