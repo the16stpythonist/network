@@ -595,7 +595,15 @@ class FormReceiverThread(threading.Thread):
         self.form = None
 
     def run(self):
-        pass
+        self.running = True
+        self.receive_title()
+        self.send_ack()
+        self.receive_body()
+        self.send_ack()
+        self.receive_appendix()
+        self.send_ack()
+        self.running = False
+        self.finished = True
 
     def receive_title(self):
         """
@@ -624,6 +632,8 @@ class FormReceiverThread(threading.Thread):
             is_separation = self.checkup_separation(line)
             if not is_separation:
                 line_list.append(line)
+                # Sending the ack
+                self.send_ack()
         # If the while loop exits, that means the separation has been sent and is now the last line that was received
         # which means the string is still inside the line variable
         self.process_separation(line)
