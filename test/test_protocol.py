@@ -1,5 +1,6 @@
 import network.protocol as protocol
 import unittest
+import json
 
 class TestForm(unittest.TestCase):
 
@@ -30,4 +31,27 @@ class TestForm(unittest.TestCase):
         body_string = '\n'.join(map(str, body_list))
         form = protocol.Form(self.std_title, body_list, self.std_appendix)
         self.assertEqual(form.body, body_string)
+
+    def test_appendix(self):
+        # Testing the turning of a list into a json string by the form
+        appendix_dict = {"a": ["first", 129], "b": list(map(str, [1, 2, 3]))}
+        appendix_json = json.dumps(appendix_dict)
+        form = protocol.Form(self.std_title, self.std_body, appendix_dict)
+        self.assertEqual(form.appendix_json, appendix_json)
+        # Testing if the json string gets detected as such and loaded from the json format
+        form = protocol.Form(self.std_title, self.std_body, appendix_json)
+        self.assertDictEqual(form.appendix, appendix_dict)
+        # Testing in case of a very long data structure
+        long_dict = {}
+        for i in range(1, 1000, 1):
+            sub_dict = {}
+            for k in range(1, 100, 1):
+                sub_dict[str(k)] = ["random", "random", "random"]
+            long_dict[str(i)] = sub_dict
+        long_json = json.dumps(long_dict)
+        form = protocol.Form(self.std_title, self.std_body, long_dict)
+        self.assertEqual(form.appendix_json, long_json)
+        form = protocol.Form(self.std_title, self.std_body, long_json)
+        self.assertDictEqual(form.appendix, long_dict)
+
 
