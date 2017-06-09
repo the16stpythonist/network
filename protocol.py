@@ -632,6 +632,18 @@ class FormReceiverThread(threading.Thread):
         body_string = '\n'.join(line_list)
         self.body = body_string
 
+    def receive_appendix(self):
+        """
+        This method will receive the appendix data from the socket, by receiving exactly as many bytes as the length
+        extracted from the separation string
+        Returns:
+        void
+        """
+        # Receiving as many bytes as the length was dictated by the separation string
+        appendix_bytes = self.sock_wrap.receive_length(self.appendix_length, timeout=self.timeout)
+        appendix_string = appendix_bytes.decode()
+        self.appendix = appendix_string
+
     def receive_line(self):
         """
         This method will receive a line from the socket as a bytes string object and then turn the byte string back
