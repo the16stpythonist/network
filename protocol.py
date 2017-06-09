@@ -687,7 +687,20 @@ class FormReceiverThread(threading.Thread):
         # Assigning that length value to the designated attribute of this object
         self.appendix_length = length
 
-
+    def assemble_form(self):
+        """
+        This method will use all the data received through the socket and saved in the objects attributes to build a
+        new form object.
+        Raises:
+            ValueError: In case the form has not been completely received yet
+        Returns:
+        void
+        """
+        # Checking if all the data has been received and if it is save to assemble a Form object from that data
+        self.check_form()
+        # Building the Form object from the received data
+        form = Form(self.title, self.body, self.appendix)
+        self.form = form
 
     def check_separation(self, line):
         """
