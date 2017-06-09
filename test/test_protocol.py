@@ -1,7 +1,28 @@
 import network.protocol as protocol
 import unittest
+import socket
+import random
+import threading
 import json
 
+
+def open_port():
+    """
+    This function will return an open network port
+    Returns:
+    the integer port number of the open port
+    """
+    # Choosing the port random in the upper port range
+    port = random.randint(30000, 60000)
+    result = 1
+    while result != 0:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        address = ('127.0.0.1', port)
+        # attempting to connect to the server, in case not possible, there is no socket on the port -> port is free
+        result = sock.connect_ex(address)
+        port = random.randint(30000, 60000)
+    # Returning the found free port
+    return port
 
 class TestForm(unittest.TestCase):
 
@@ -86,4 +107,25 @@ class TestForm(unittest.TestCase):
         form = protocol.Form(self.std_title, '', '')
         self.assertFalse(form.valid)
         self.assertTrue(form.empty)
+
+
+
+class SockGrab(threading.Thread):
+
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.connect()
+
+class TestFormTransmission(unittest.TestCase):
+
+    std_separation = "$separation$"
+    std_port = 56777
+
+    def test_init(self):
+
+        transmitter = protocol.FormTransmitterThread()
+
+    def socket_pair(self):
+        pass
 
