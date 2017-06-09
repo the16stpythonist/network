@@ -66,4 +66,14 @@ class TestForm(unittest.TestCase):
         form = protocol.Form(self.std_title, self.std_body, long_json)
         self.assertDictEqual(form.appendix, long_dict)
 
+    def test_empty(self):
+        # Testing in case an empty object is given as appendix
+        form = protocol.Form('', '', [])
+        self.assertTrue(form.empty)
+        # Testing in case an empty string is given as appendix
+        form = protocol.Form('', '', '')
+        self.assertTrue(form.empty)
+        # Testing in case the body is an empty list
+        form = protocol.Form('', [], '')
+        self.assertTrue(form)
 

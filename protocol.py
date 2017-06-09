@@ -293,6 +293,11 @@ class Form:
         """
         # In case the appendix is a string it is being interpreted as already in json format and thus trying to unjson
         if isinstance(self.appendix, str):
+            # Adding the sepcial case of the string being empty signaling an empty appendix
+            if len(self.appendix.strip()) == 0:
+                self.appendix_json = ''
+                self.appendix = []
+                return None
             try:
                 self.appendix_json = self.appendix
                 self.appendix = json.loads(self.appendix_json)
