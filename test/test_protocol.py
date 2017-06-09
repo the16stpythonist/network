@@ -32,6 +32,15 @@ class TestForm(unittest.TestCase):
         form = protocol.Form(self.std_title, body_list, self.std_appendix)
         self.assertEqual(form.body, body_string)
 
+    def test_init_error(self):
+        # Testing if the correct exceptions are risen in case a wrong param is passed
+        with self.assertRaises(TypeError):
+            protocol.Form(12, self.std_body, self.std_appendix)
+        with self.assertRaises(ValueError):
+            protocol.Form(self.std_title, 12, self.std_appendix)
+        with self.assertRaises(ValueError):
+            protocol.Form(self.std_title, self.std_body, "{hallo")
+
     def test_appendix(self):
         # Testing the turning of a list into a json string by the form
         appendix_dict = {"a": ["first", 129], "b": list(map(str, [1, 2, 3]))}
@@ -42,6 +51,7 @@ class TestForm(unittest.TestCase):
         form = protocol.Form(self.std_title, self.std_body, appendix_json)
         self.assertDictEqual(form.appendix, appendix_dict)
         # Testing in case of a very long data structure
+        # Creating a very long dictionary structure
         long_dict = {}
         for i in range(1, 1000, 1):
             sub_dict = {}
@@ -49,8 +59,10 @@ class TestForm(unittest.TestCase):
                 sub_dict[str(k)] = ["random", "random", "random"]
             long_dict[str(i)] = sub_dict
         long_json = json.dumps(long_dict)
+        # Testing the internal conversion from dict to json
         form = protocol.Form(self.std_title, self.std_body, long_dict)
         self.assertEqual(form.appendix_json, long_json)
+        # Testing the internal conversion from json string to object
         form = protocol.Form(self.std_title, self.std_body, long_json)
         self.assertDictEqual(form.appendix, long_dict)
 
