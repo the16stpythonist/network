@@ -2,6 +2,7 @@ import network.protocol as protocol
 import unittest
 import json
 
+
 class TestForm(unittest.TestCase):
 
     std_title = "Test"
@@ -76,4 +77,13 @@ class TestForm(unittest.TestCase):
         # Testing in case the body is an empty list
         form = protocol.Form('', [], '')
         self.assertTrue(form)
+
+    def test_valid(self):
+        # Checking if the valid property is actually false with empty title
+        form = protocol.Form('', self.std_body, self.std_appendix)
+        self.assertFalse(form.valid)
+        # A form should also be unvalid in case it is empty
+        form = protocol.Form(self.std_title, '', '')
+        self.assertFalse(form.valid)
+        self.assertTrue(form.empty)
 
