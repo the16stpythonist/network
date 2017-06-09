@@ -687,6 +687,8 @@ class FormReceiverThread(threading.Thread):
         # Assigning that length value to the designated attribute of this object
         self.appendix_length = length
 
+
+
     def check_separation(self, line):
         """
         This method checks, whether the passed object is a string and then also checks if that string is actually the
@@ -707,6 +709,18 @@ class FormReceiverThread(threading.Thread):
             raise TypeError("The passed line is not even a string")
         if not self.checkup_separation(line):
             raise ValueError("The passed line is not the separation string")
+
+    def check_form(self):
+        """
+        This method checks if all the attribute of this object, that were supposed to contain the form data actually
+        contain data other than None and thus checking if it is save to assemble a form object.
+        Raises:
+            ValueError
+        Returns:
+        void
+        """
+        if self.title is None or self.body is None or self.appendix is None:
+            raise ValueError("The form data has not been completely received")
 
     def checkup_separation(self, line):
         """
