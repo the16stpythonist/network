@@ -108,9 +108,8 @@ class SocketWrapper:
                 break
             else:
                 # In case the character is not there adding the byte to the counter and incrementing the counter
-                data += character
+                data += current
                 counter += 1
-
         return data
 
     def receive_line(self, limit, timeout=None):
@@ -182,7 +181,7 @@ class SocketWrapper:
         if not self.connected:
             raise ConnectionError("There is no open connection to send to yet!")
         # Actually calling the method of the socket
-        self.sock.sedall(data)
+        self.sock.sendall(data.encode())
 
     def release_socket(self):
         """
@@ -404,7 +403,7 @@ class Form:
         if isinstance(other, Form):
             same_title = other.title == self.title
             same_body = other.body == self.body
-            same_appendix = other.body == self.appendix
+            same_appendix = other.appendix == self.appendix
             if same_title and same_body and same_appendix:
                 return True
         return False
@@ -455,8 +454,11 @@ class FormTransmitterThread(threading.Thread):
     def run(self):
         self.running = True
         self.send_title()
+        self.wait_ack()
         self.send_body()
+        self.wait_ack()
         self.send_appendix()
+        self.wait_ack()
 
         # Updating the state variables
         self.running = False
@@ -476,10 +478,9 @@ class FormTransmitterThread(threading.Thread):
         # Sending the separation at last
         separator = self.assemble_separator()
         self.sock_wrap.sendall(separator+"\n")
-        self.wait_ack()
 
     def send_title(self):
-        title = self.form.title
+        title = self.form.title + "\n"
         self.sock_wrap.sendall(title)
 
     def send_appendix(self):
@@ -490,7 +491,6 @@ class FormTransmitterThread(threading.Thread):
         """
         appendix_json = self.form.appendix_json
         self.sock_wrap.sendall(appendix_json)
-        self.wait_ack()
 
     def wait_ack(self):
         """
@@ -503,7 +503,7 @@ class FormTransmitterThread(threading.Thread):
         response = []
         start_time = time.time()
         time_delta = 0
-        while response != ["a", "c", "k"]:
+        while response != [b"a", b"c", b"k"]:
             if time_delta >= self.timeout:
                 raise TimeoutError("Timeout exceeded, while waiting for ack")
             # Adding a character at the time to the response list
@@ -572,7 +572,7 @@ class FormTransmitterThread(threading.Thread):
         """
         appendix = self.form.appendix_json
         appendix_length = len(appendix.encode('utf-8'))
-        return ''.join([self.separation, appendix_length])
+        return ''.join([self.separation, str(appendix_length)])
 
     def adjust_body_string(self):
         """
@@ -625,6 +625,7 @@ class FormReceiverThread(threading.Thread):
         self.send_ack()
         self.receive_appendix()
         self.send_ack()
+        self.assemble_form()
         self.running = False
         self.finished = True
 
@@ -779,11 +780,11 @@ class FormReceiverThread(threading.Thread):
         The boolean value of the line being the separation line or not
         """
         # The first condition of the line being the separation is it being longer than the sep string alone
-        if len(line) > self.separation:
+        if len(line) > len(self.separation):
             separation_length = len(self.separation)
-            if line[:separation_length] is self.separation:
+            if line[:separation_length] == self.separation:
                 return True
-        # In case one of the condifitions was not given, False is returned
+        # In case one of the conditions was not given, False is returned
         return False
 
     def send_ack(self):

@@ -227,6 +227,19 @@ class TestForm(unittest.TestCase):
         self.assertFalse(form.valid)
         self.assertTrue(form.empty)
 
+    def test_eq(self):
+        """
+        Tests the equal comparison of the form objects
+        Returns:
+        void
+        """
+        form1 = protocol.Form(self.std_title, self.std_body, self.std_appendix)
+        form2 = protocol.Form(self.std_title, self.std_body, self.std_appendix)
+        # Testing if the equal comparison is correctly used by the assert intern function of unittest
+        self.assertEqual(form1, form2)
+        # Testing if the equals operator works correctly
+        self.assertTrue(form1 == form2)
+
 
 class TestFormTransmission(unittest.TestCase):
 
@@ -259,9 +272,24 @@ class TestFormTransmission(unittest.TestCase):
             protocol.FormTransmitterThread(self.dummy_socket, form, separation, adjust=False)
 
     def test_basic(self):
+        """
+        Testing the basic functionality of the form transmission process and if the sockets used for the transmission
+        can be recycled for another transmission
+        Returns:
+        void
+        """
         socks = sockets()
+        # Testing the basic functionality of the form transmission
         transmitter = protocol.FormTransmitterThread(socks[0], self.std_form, self.std_separation)
         receiver = protocol.FormReceiverThread(socks[1], self.std_separation)
+        transmitter.start()
+        receiver.start()
+        while not receiver.finished:
+            time.sleep(0.001)
+        self.assertEqual(receiver.form, self.std_form)
+        # Testing if the sockets can be reused after the sending of one form
+        transmitter = protocol.FormTransmitterThread(socks[1], self.std_form, self.std_separation)
+        receiver = protocol.FormReceiverThread(socks[0], self.std_separation)
         transmitter.start()
         receiver.start()
         while not receiver.finished:
