@@ -284,16 +284,46 @@ class TestFormTransmission(unittest.TestCase):
         receiver = protocol.FormReceiverThread(socks[1], self.std_separation)
         transmitter.start()
         receiver.start()
-        while not receiver.finished:
-            time.sleep(0.001)
+        # Waiting for the transmission to finish
+        receiver.receive_form()
         self.assertEqual(receiver.form, self.std_form)
         # Testing if the sockets can be reused after the sending of one form
         transmitter = protocol.FormTransmitterThread(socks[1], self.std_form, self.std_separation)
         receiver = protocol.FormReceiverThread(socks[0], self.std_separation)
         transmitter.start()
         receiver.start()
-        while not receiver.finished:
-            time.sleep(0.001)
+        # Waiting for the transmission to finish
+        receiver.receive_form()
         self.assertEqual(receiver.form, self.std_form)
 
+    def test_empty_appendix(self):
+        """
+        Testing whether the transmission works correctly with an empty appendix
+        Returns:
+        void
+        """
+        socks = sockets()
+        # Testing for the case that the appendix of the form is empty
+        form = protocol.Form("title", ["first", "second"], '')
+        transmitter = protocol.FormTransmitterThread(socks[0], form, self.std_separation)
+        receiver = protocol.FormReceiverThread(socks[1], self.std_separation)
+        transmitter.start()
+        receiver.start()
+        received_form = receiver.receive_form()
+        self.assertEqual(form.appendix, received_form.appendix)
 
+    def test_empty_body(self):
+        """
+        Testing whether the transmission works correctly with an empty body
+        Returns:
+        void
+        """
+        socks = sockets()
+        form = protocol.Form("title", "", ["hallo"])
+        transmitter = protocol.FormTransmitterThread(socks[0], form, self.std_separation)
+        receiver = protocol.FormReceiverThread(socks[1], self.std_separation)
+        transmitter.start()
+        receiver.start()
+        received_form = receiver.receive_form()
+        self.assertEqual(form.body, received_form.body)
+        self.assertEqual(form.appendix, received_form.appendix)
