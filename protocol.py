@@ -391,6 +391,24 @@ class Form:
             else:
                 raise ValueError("The body attribute must either be a string or a list os strings")
 
+    def __eq__(self, other):
+        """
+        The magic method for comparing two form objects. Two form objects are equal if the title, the body and the
+        appendix are equal
+        Args:
+            other: The other Form object to test
+
+        Returns:
+        boolean value of whether or not they are equal
+        """
+        if isinstance(other, Form):
+            same_title = other.title == self.title
+            same_body = other.body == self.body
+            same_appendix = other.body == self.appendix
+            if same_title and same_body and same_appendix:
+                return True
+        return False
+
 
 class FormTransmitterThread(threading.Thread):
     """

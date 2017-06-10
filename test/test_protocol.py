@@ -258,4 +258,14 @@ class TestFormTransmission(unittest.TestCase):
             form = protocol.Form(title, body, '')
             protocol.FormTransmitterThread(self.dummy_socket, form, separation, adjust=False)
 
+    def test_basic(self):
+        socks = sockets()
+        transmitter = protocol.FormTransmitterThread(socks[0], self.std_form, self.std_separation)
+        receiver = protocol.FormReceiverThread(socks[1], self.std_separation)
+        transmitter.start()
+        receiver.start()
+        while not receiver.finished:
+            time.sleep(0.001)
+        self.assertEqual(receiver.form, self.std_form)
+
 
