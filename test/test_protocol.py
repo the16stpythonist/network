@@ -360,3 +360,25 @@ class TestFormTransmission(unittest.TestCase):
         # Waiting for the form to be received
         received_form = receiver.receive_form()
         self.assertEqual(form.body, received_form.body)
+
+    def test_long_appendix(self):
+        """
+        Testing if a long appendix can be received correctly
+        Returns:
+
+        """
+        # Creating the long appendix
+        appendix = {}
+        for i in range(1, 1000, 1):
+            appendix["random key string" + str(i)] = "random text to be used as value"
+        # Creating the form object with the long appendix
+        form = protocol.Form("title", ["first", "second"], appendix)
+        # Creating the sockets and the transmission objects
+        socks = sockets()
+        transmitter = protocol.FormTransmitterThread(socks[0], form, self.std_separation)
+        receiver = protocol.FormReceiverThread(socks[1], self.std_separation)
+        transmitter.start()
+        receiver.start()
+        # Waiting for the form to be received
+        received_form = receiver.receive_form()
+        self.assertEqual(form.appendix, received_form.appendix)
