@@ -116,6 +116,11 @@ class TestForm(unittest.TestCase):
     std_appendix = ["one", "two"]
 
     def test_init(self):
+        """
+        Testing the correct assignment of the attributes
+        Returns:
+        void
+        """
         # Building the form
         form = protocol.Form(self.std_title, self.std_body, self.std_appendix)
         self.assertEqual(form.title, self.std_title)
@@ -123,7 +128,14 @@ class TestForm(unittest.TestCase):
         self.assertEqual(form.appendix, self.std_appendix)
 
     def test_body(self):
-        # Testing the turing of a list into a line separated string
+        """
+        Testing the functionality of passing the Form a list as body and having it correctly transformed into a string
+        Testing passing a list of none strings and having them correctly converted to strings
+        Testing for the case of a really long list
+        Returns:
+        void
+        """
+        # Testing the turning of a list into a line separated string
         body_list = ["first line", "second line", "third line"]
         body_string = "first line\nsecond line\nthird line"
         form = protocol.Form(self.std_title, body_list, self.std_appendix)
@@ -140,6 +152,11 @@ class TestForm(unittest.TestCase):
         self.assertEqual(form.body, body_string)
 
     def test_init_error(self):
+        """
+        Testing the correct exceptions in case faulty data is passed as parameters
+        Returns:
+        void
+        """
         # Testing if the correct exceptions are risen in case a wrong param is passed
         with self.assertRaises(TypeError):
             protocol.Form(12, self.std_body, self.std_appendix)
@@ -149,6 +166,13 @@ class TestForm(unittest.TestCase):
             protocol.Form(self.std_title, self.std_body, "{hallo")
 
     def test_appendix(self):
+        """
+        Testing the turning of a dictionary into a json string as appendix
+        Testing the loading of data from passing a json string
+        Testing for a huge nested data structure
+        Returns:
+        void
+        """
         # Testing the turning of a list into a json string by the form
         appendix_dict = {"a": ["first", 129], "b": list(map(str, [1, 2, 3]))}
         appendix_json = json.dumps(appendix_dict)
@@ -174,6 +198,11 @@ class TestForm(unittest.TestCase):
         self.assertDictEqual(form.appendix, long_dict)
 
     def test_empty(self):
+        """
+        Testing the empty functionality correctly working
+        Returns:
+        void
+        """
         # Testing in case an empty object is given as appendix
         form = protocol.Form('', '', [])
         self.assertTrue(form.empty)
@@ -185,6 +214,11 @@ class TestForm(unittest.TestCase):
         self.assertTrue(form)
 
     def test_valid(self):
+        """
+        Testing if the valid flag works correctly
+        Returns:
+        void
+        """
         # Checking if the valid property is actually false with empty title
         form = protocol.Form('', self.std_body, self.std_appendix)
         self.assertFalse(form.valid)
@@ -202,6 +236,13 @@ class TestFormTransmission(unittest.TestCase):
     dummy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def test_adjust(self):
+        """
+        Testing the adjust option for the creation of the FormTransmissionThread. For adjust True the body is supposed
+        to be changed, so that there is no collision of the body and the separation, if it is False a exception will
+        be risen in case there is a collision
+        Returns:
+        void
+        """
         separation = "hallo"
         title = "TITLE"
         body = ["first", "hallo", "second"]
