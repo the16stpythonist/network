@@ -629,6 +629,17 @@ class FormReceiverThread(threading.Thread):
         self.running = False
         self.finished = True
 
+    def receive_form(self):
+        """
+        This method will be blocking until the finished flag of the object was set to True and then return the
+        received form object
+        Returns:
+        The Form object received through the socket
+        """
+        while not self.finished:
+            time.sleep(0.001)
+        return self.form
+
     def receive_title(self):
         """
         This method receives a single line and assigns that line as the title of the form. Because it does so, this
