@@ -327,3 +327,14 @@ class TestFormTransmission(unittest.TestCase):
         received_form = receiver.receive_form()
         self.assertEqual(form.body, received_form.body)
         self.assertEqual(form.appendix, received_form.appendix)
+
+    def test_valid(self):
+        """
+        Testing whether the transmitter actually raises a error if it is about to send a invalid form
+        Returns:
+        void
+        """
+        with self.assertRaises(ValueError):
+            # Creating an invalid form of the missing title kind
+            form = protocol.Form('', "hallo", '')
+            protocol.FormTransmitterThread(self.dummy_socket, form, self.std_separation)
