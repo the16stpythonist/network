@@ -338,3 +338,25 @@ class TestFormTransmission(unittest.TestCase):
             # Creating an invalid form of the missing title kind
             form = protocol.Form('', "hallo", '')
             protocol.FormTransmitterThread(self.dummy_socket, form, self.std_separation)
+
+    def test_long_body(self):
+        """
+        Testing if a long body string can be received correctly
+        Returns:
+        void
+        """
+        # Creating the long body
+        body = []
+        for i in range(1, 1000, 1):
+            body.append("this is just some random text 123")
+        # Creating the form with the long body and empty appendix
+        form = protocol.Form("title", body, '')
+        # Creating the sockets and the transmission objects
+        socks = sockets()
+        transmitter = protocol.FormTransmitterThread(socks[0], form, self.std_separation)
+        receiver = protocol.FormReceiverThread(socks[1], self.std_separation)
+        transmitter.start()
+        receiver.start()
+        # Waiting for the form to be received
+        received_form = receiver.receive_form()
+        self.assertEqual(form.body, received_form.body)
