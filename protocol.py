@@ -362,11 +362,12 @@ class Form:
         appendix_json: The Json string of the data to be represented by the appendix
         appendix: The actual data object, described by the json string
     """
-    def __init__(self, title, body, appendix):
+    def __init__(self, title, body, appendix, appendix_encoder=JsonAppendixEncoder):
         self.title = title
         self.body = body
         self.appendix = appendix
-        self.appendix_json = None
+        self.appendix_encoded = None
+        self.appendix_encoder = appendix_encoder
 
         # Checking if the title is a string without a new line, as needed
         self.check_title()
@@ -404,24 +405,23 @@ class Form:
         Raises:
             ValueError: In case the object cannot be turned into a json
         Returns:
-
+        void
         """
         # In case the appendix is a string it is being interpreted as already in json format and thus trying to unjson
-        if isinstance(self.appendix, str):
-            # Adding the sepcial case of the string being empty signaling an empty appendix
-            if len(self.appendix.strip()) == 0:
-                self.appendix_json = ''
-                self.appendix = []
-                return None
+        if isinstance(self.appendix, bytes):
             try:
-                self.appendix_json = self.appendix
-                self.appendix = json.loads(self.appendix_json)
-            except ValueError as e:
-                raise e
+                # Attempting to use the encoder to encoder to decode the bytes string
+                self.appendix_encoded = self.appendix
+                appendix_decoded = self.appendix_encoder.decode(self.appendix_encoded)
+                self.appendix = appendix_decoded
+            except ValueError as value_error:
+                raise value_error
+            except TypeError as type_error:
+                raise type_error
         # All other data types are interpreted as raw data and are being jsoned
         else:
             try:
-                self.appendix_json = json.dumps(self.appendix)
+                self.appendix_encoded = self.appendix_encoder.encode(self.appendix)
             except ValueError as e:
                 raise e
 
@@ -605,8 +605,8 @@ class FormTransmitterThread(threading.Thread):
         Returns:
         void
         """
-        appendix_json = self.form.appendix_json
-        self.sock_wrap.sendall(appendix_json)
+        appendix_encoded = self.form.appendix_encoded
+        self.sock_wrap.sendall(appendix_encoded)
 
     def wait_ack(self):
         """
