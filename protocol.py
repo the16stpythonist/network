@@ -259,6 +259,46 @@ class AppendixEncoder:
         pass
 
 
+class JsonAppendixEncoder(AppendixEncoder):
+
+    @staticmethod
+    def encode(obj):
+        """
+        This method will use the json dumps functionality to turn the iterable object given into a json string and
+        then return the bytes representation of that string.
+        Args:
+            obj: Any kind of object, that is naturally json serializable, which is most of the python native iterables
+
+        Returns:
+        The byte string representation of the object
+        """
+        json_string = json.dumps(obj)
+        byte_string = json_string.encode()
+        return byte_string
+
+    @staticmethod
+    def decode(byte_string):
+        """
+        Thus method will use the json loads functionality to turn the byte string object given back into a string using
+        the regular utf 8 decoding and then attempting to json load the original object from that string.
+        Notes:
+            In case the byte string obe
+        Args:
+            byte_string: The bytes object, that was originally a object encoded with json
+
+        Returns:
+        The object, stored as the byte string
+        """
+        # Turning the bytes back into the json string first
+        json_string = byte_string.decode()
+        # Adding the special case for an empty string
+        if len(json_string.strip()) == 0:
+            return []
+        # Loading the json object from the string & returning
+        obj = json.loads(json_string)
+        return obj
+
+
 class Form:
     """
     GENERAL
