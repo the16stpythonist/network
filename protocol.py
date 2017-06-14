@@ -216,6 +216,48 @@ class SocketWrapper:
 
 # THE FORM TRANSMISSION PROTOCOL
 
+class AppendixEncoder:
+    """
+    INTERFACE
+    This is a base class acting as an interface for the different appendix encoder variations.
+    The appendix encoder classes are supposed to be static classes implementing the two methods 'encode' and 'decode'
+    with which the appendix of a form object can be encoded into a bytestring format, which can be transported over
+    a network socket and then be decoded by a form object on the receiving end.
+
+    Notes:
+    The different encoder classes are supposed to provide more variance to what kind of objects can be transmitted as
+    the appendix of the 'Form' class. Because these encoder classes are mainly used by the Form object to encode and
+    decode the appendix objects, theses processes have to be designed for exactly that purpose.
+    """
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def encode(obj):
+        """
+        The encode method is supposed to take any object, that is valid for the specific implementation of the encoding
+        and return the byte string representation.
+        Args:
+            obj: Any type of object, that can be encoded by the chosen method
+
+        Returns:
+        a string representation of that object
+        """
+        pass
+
+    @staticmethod
+    def decode(byte_string):
+        """
+        The decode method is supposed to take a string object and turn it back into the object, that was originally
+        encoded using the same method
+        Args:
+            byte_string: The byte string, which is the encoded format of the received object
+
+        Returns:
+        Any kind of object, that was subject to the encoding process
+        """
+        pass
+
 
 class Form:
     """
