@@ -545,7 +545,7 @@ class FormTransmitterThread(threading.Thread):
     The separation string is supposed to be a definite sign, that the body of the form is now finished and that the
     appendix starts now. In case the separation string is already the front part of a line in the body of the form
     that would lead to an error. Through the 'adjust' parameter it can be set, that the body is being searched for
-    occurances of the separation string and then adjusted, so that they would not be recognised, by adding a whitespace
+    ocurrances of the separation string and then adjusted, so that they would not be recognised, by adding a whitespace
     at the front of the line. In case the adjust is False, the body will be searched for the separation string and
     an exception risen in case one was found
     """
@@ -691,8 +691,8 @@ class FormTransmitterThread(threading.Thread):
         Returns:
         The string consisting of the separation string and the length of the appendix
         """
-        appendix = self.form.appendix_json
-        appendix_length = len(appendix.encode('utf-8'))
+        appendix = self.form.appendix_encoded
+        appendix_length = len(appendix)
         return ''.join([self.separation, str(appendix_length)])
 
     def adjust_body_string(self):
@@ -807,7 +807,7 @@ class FormReceiverThread(threading.Thread):
         """
         # Receiving as many bytes as the length was dictated by the separation string
         appendix_bytes = self.sock_wrap.receive_length(self.appendix_length, timeout=self.timeout)
-        appendix_string = appendix_bytes.decode()
+        appendix_string = appendix_bytes
         self.appendix = appendix_string
 
     def receive_line(self):

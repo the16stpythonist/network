@@ -163,9 +163,9 @@ class TestForm(unittest.TestCase):
         with self.assertRaises(ValueError):
             protocol.Form(self.std_title, 12, self.std_appendix)
         with self.assertRaises(ValueError):
-            protocol.Form(self.std_title, self.std_body, "{hallo")
+            protocol.Form(self.std_title, self.std_body, b"{hallo")
 
-    def test_appendix(self):
+    def test_appendix_json_basic(self):
         """
         Testing the turning of a dictionary into a json string as appendix
         Testing the loading of data from passing a json string
@@ -173,29 +173,33 @@ class TestForm(unittest.TestCase):
         Returns:
         void
         """
-        # Testing the turning of a list into a json string by the form
-        appendix_dict = {"a": ["first", 129], "b": list(map(str, [1, 2, 3]))}
-        appendix_json = json.dumps(appendix_dict)
-        form = protocol.Form(self.std_title, self.std_body, appendix_dict)
-        self.assertEqual(form.appendix_json, appendix_json)
-        # Testing if the json string gets detected as such and loaded from the json format
-        form = protocol.Form(self.std_title, self.std_body, appendix_json)
-        self.assertDictEqual(form.appendix, appendix_dict)
-        # Testing in case of a very long data structure
-        # Creating a very long dictionary structure
-        long_dict = {}
-        for i in range(1, 1000, 1):
-            sub_dict = {}
-            for k in range(1, 100, 1):
-                sub_dict[str(k)] = ["random", "random", "random"]
-            long_dict[str(i)] = sub_dict
-        long_json = json.dumps(long_dict)
-        # Testing the internal conversion from dict to json
-        form = protocol.Form(self.std_title, self.std_body, long_dict)
-        self.assertEqual(form.appendix_json, long_json)
-        # Testing the internal conversion from json string to object
-        form = protocol.Form(self.std_title, self.std_body, long_json)
-        self.assertDictEqual(form.appendix, long_dict)
+        appendix_dict = {"one": 1, "two": 2}
+        # Testing the encoding process of the json encoder
+        form = protocol.Form("hallo", ["hallo", "hallo"], appendix_dict,
+                             appendix_encoder=protocol.JsonAppendixEncoder)
+        appendix_encoded = protocol.JsonAppendixEncoder.encode(appendix_dict)
+        self.assertEqual(form.appendix_encoded, appendix_encoded)
+        # Testing the decoding process of the json encoder
+        form = protocol.Form(self.std_title, self.std_body, appendix_encoded)
+        self.assertEqual(form.appendix, appendix_dict)
+
+    def test_appendix_pickle_basic(self):
+        """
+        Testing the encoding of the appendix using the pickle encoder
+        Testing the decoding of the appendix using the pickle encoder
+        Returns:
+        void
+        """
+        appendix_dict = {"one": 1, "two": 2}
+        # Testing the encoding process of the pickle encoder
+        form = protocol.Form("hallo", self.std_body, appendix_dict,
+                             appendix_encoder=protocol.PickleAppendixEncoder)
+        appendix_encoded = protocol.PickleAppendixEncoder.encode(appendix_dict)
+        self.assertEqual(form.appendix_encoded, appendix_encoded)
+        # Testing the decoding process of the pickle encoder
+        form = protocol.Form(self.std_title, self.std_body, appendix_encoded,
+                             appendix_encoder=protocol.PickleAppendixEncoder)
+        self.assertEqual(form.appendix, appendix_dict)
 
     def test_empty(self):
         """
