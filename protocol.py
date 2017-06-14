@@ -1,5 +1,6 @@
 import threading
 import socket
+import pickle
 import time
 import json
 
@@ -296,6 +297,39 @@ class JsonAppendixEncoder(AppendixEncoder):
             return []
         # Loading the json object from the string & returning
         obj = json.loads(json_string)
+        return obj
+
+
+class PickleAppendixEncoder(AppendixEncoder):
+    """
+    This class provides the static methods to encode a appendix object using the pickle mechanism, which enables the
+    use of more complex and custom objects.
+    """
+    @staticmethod
+    def encode(obj):
+        """
+        This method uses the python native pickle dumps functionality to directly turn the given object into a byte
+        string
+        Args:
+            obj: The object to convert
+
+        Returns:
+        The pickled byte string
+        """
+        byte_string = pickle.dumps(obj)
+        return byte_string
+
+    @staticmethod
+    def decode(byte_string):
+        """
+        This method calls the pickle loads on the given byte string to load the encoded object
+        Args:
+            byte_string: The byte string representation of the encoded object
+
+        Returns:
+        The original object
+        """
+        obj = pickle.loads(byte_string)
         return obj
 
 
