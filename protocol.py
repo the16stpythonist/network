@@ -182,7 +182,12 @@ class SocketWrapper:
         if not self.connected:
             raise ConnectionError("There is no open connection to send to yet!")
         # Actually calling the method of the socket
-        self.sock.sendall(data.encode())
+        if isinstance(data, bytes):
+            self.sock.sendall(data)
+        elif isinstance(data, str):
+            self.sock.sendall(data.encode())
+        else:
+            raise TypeError("The data to send via socket has to be either string or bytes")
 
     def release_socket(self):
         """
