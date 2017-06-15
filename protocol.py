@@ -928,3 +928,70 @@ class FormReceiverThread(threading.Thread):
         """
         self.sock_wrap.sendall("ack")
 
+
+# THE COMMANDING PROTOCOL
+
+
+class CommandContext:
+    """
+    BASE CLASS
+    This is the base class for all specific CommandContext objects. The command context objects are supposed to be
+    providing the necessary implementations for the commands used by the CommandingProtocol.
+
+    CREATING COMMAND CONTEXTS
+    Commands can be added to the functionality of a specific command set implementation by having a new specialized
+    subclass inherit from this CommandContext class and adding new methods, whose names start with 'command' and an
+    underscore, followed by the (exact!) name of the command whose functionality is to be implemented:
+    Example: def command_print(self, pos_args, kw_args): ...
+
+    EXECUTING COMMANDS:
+    The commandContext objects ca be used to directly execute commands, described by a CommandingForm sub class, by
+    being passed to the execute method.
+    """
+    def __init__(self):
+        pass
+
+    def lookup_command(self, command_name):
+        """
+        This method will use the command name given and first assemble the corresponding method name for that command
+        name and then it will attempt to get the attribute of this very command context object. If a method exists,
+        that implements the given command name, then the method will return the function object of that method.
+        Args:
+            command_name: The command name to which the method/ function object is requested
+
+        Returns:
+        The function object of the internal command context method with the name specified by the command name
+        """
+        try:
+            command_method_name = self.assemble_command_name(command_name)
+            return getattr(self, command_method_name)
+        except AttributeError as attribute_error:
+            raise attribute_error
+
+    @staticmethod
+    def assemble_command_name(command_name):
+        """
+        Using the name of the command specified by 'command_name' to assemble the name of the method of the context
+        object corresponding to that command name. By definition the names of the methods corresponding to specific
+        commands have to be named beginning with command, followed by an underscore and the the actual command name
+        Notes:
+            This method will only assemble the string, as defined by definition, but will not check for the validity
+            of that string. The command specified by the command name, might not even be subject to the specific
+            command context object, but the possible name will be assembled anyways.
+        Args:
+            command_name: The string command name of the command for which the method name is requested
+
+        Returns:
+        The string name of the CommandContext method corresponding to the command name given
+        """
+        string_list = ["command_", command_name]
+        command_method_name = ''.join(string_list)
+        return command_method_name
+
+
+class CommandingForm(Form):
+    """
+    INTERFACE
+    """
+    def __init__(self, title, body, appendix, appendix_encoder=JsonAppendixEncoder):
+        Form.__init__(title, body, appendix, appendix_encoder)
