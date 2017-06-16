@@ -1038,3 +1038,23 @@ class CommandForm(CommandingForm):
 
     def __init__(self, form):
         CommandingForm.__init__(self, form)
+        # Initializing the attributes for the command form
+        # This dictionary contains all the lines in the body with their keys and values
+        self.spec = {}
+        # The string name of the command to be called in the remote location
+        self.command_name = ""
+        # The positional arguments for the command call
+        self.pos_args = []
+        # The keyword arguments for the command call
+        self.key_args = {}
+
+    def procure_body_lines(self):
+        """
+        This method will return a list os strings, where each string is one line of the body string. A line is defined
+        as the sum if characters until a new line character.
+        Returns:
+        The list of line strings for the body
+        """
+        body_lines = self.body.split("\n")
+        return body_lines
+
