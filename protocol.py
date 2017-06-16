@@ -1098,6 +1098,7 @@ class CommandingForm:
 class CommandForm(CommandingForm):
 
     def __init__(self, command, pos_args=[], kw_args={}, return_handle="reply", error_handle="reply"):
+        self.type = "COMMAND"
         # Initializing the attributes for the command form
         if isinstance(command, Form):
             CommandingForm.__init__(self, command)
@@ -1114,6 +1115,8 @@ class CommandForm(CommandingForm):
             # Building the form from the information about the command
             form = self.build_form()
             CommandingForm.__init__(self, form)
+
+        self.check_type()
 
     def build_form(self):
         """
@@ -1169,14 +1172,13 @@ class CommandForm(CommandingForm):
         spec["pos_args"] = len(self.pos_args)
         return spec
 
-    @staticmethod
-    def procure_form_title():
+    def procure_form_title(self):
         """
         This method simply returns the title for a command form which is the string "COMMAND"
         Returns:
         the string title for the form
         """
-        return "COMMAND"
+        return self.type
 
     def procure_command_name(self):
         """
@@ -1201,4 +1203,16 @@ class CommandForm(CommandingForm):
         void
         """
         self.check_spec_key("command")
+
+    def check_type(self):
+        """
+        This method checks if the type of the underlying form matches the type of wrapper object, by checking if the
+        title matches the type string. In case it does not raises error
+        Raises:
+            TypeError
+        Returns:
+        void
+        """
+        if self.title != self.type:
+            raise TypeError("The given form is not a command form!")
 
