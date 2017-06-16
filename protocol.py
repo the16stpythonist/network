@@ -995,6 +995,8 @@ class CommandingForm:
     """
     def __init__(self, form):
         self.form = form
+        # The spec dict contains all the key value pairs specified in the body 
+        self.spec = self.procure_body_dict_raw()
 
     def procure_body_dict_raw(self):
         """
@@ -1083,12 +1085,22 @@ class CommandForm(CommandingForm):
     def __init__(self, form):
         CommandingForm.__init__(self, form)
         # Initializing the attributes for the command form
-        # This dictionary contains all the lines in the body with their keys and values
-        self.spec = {}
         # The string name of the command to be called in the remote location
         self.command_name = ""
         # The positional arguments for the command call
         self.pos_args = []
         # The keyword arguments for the command call
         self.key_args = {}
+
+    def check_command_name(self):
+        """
+        This method checks if the 'command' field was specified in the body of the form and raises an error if that is
+        not the case
+        Raises:
+            AttributeError: In case the key 'command' is not in the spec dict
+        Returns:
+        void
+        """
+        if "command" not in self.spec.keys():
+            raise AttributeError("The command name was not specified in the form!")
 
