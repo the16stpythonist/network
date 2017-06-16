@@ -1102,6 +1102,7 @@ class CommandForm(CommandingForm):
         # Initializing the attributes for the command form
         if isinstance(command, Form):
             CommandingForm.__init__(self, command)
+            self.check_type()
         elif isinstance(command, str):
             # The string name of the command to be called in the remote location
             self.command_name = command
@@ -1115,8 +1116,6 @@ class CommandForm(CommandingForm):
             # Building the form from the information about the command
             form = self.build_form()
             CommandingForm.__init__(self, form)
-
-        self.check_type()
 
     def build_form(self):
         """
@@ -1192,6 +1191,23 @@ class CommandForm(CommandingForm):
         # Getting the command name from the dict and returning it
         command_name = self.spec["command"].strip()
         return command_name
+
+    def check_appendix(self):
+        """
+        This method checks if the appendix object of the form is a dictionary and if that dict has the two entries for
+        the pos args and the kw args, as it has to be with a command form
+        Returns:
+        voif
+        """
+        # Checking if the appendix even is a dictionary
+        dict_type = not isinstance(self.appendix, dict)
+        if dict_type:
+            raise TypeError("The appendix of the command form is supposed ot be a dict!")
+        # Checking if the entries of the appendix dict are correct
+        keys = self.appendix.keys()
+        entries = len(keys) != 2 or 'pos_args' not in keys() or 'kw_args' not in keys()
+        if entries:
+            raise KeyError("The entries of form appendix do not match command form!")
 
     def check_command_name(self):
         """
