@@ -1111,15 +1111,40 @@ class CommandForm(CommandingForm):
             # The handles are string identifiers about how the return value and the error are suppose to be treated
             self.error_handle = error_handle
             self.return_handle = return_handle
+            # Building the form from the information about the command
+            form = self.build_form()
+            CommandingForm.__init__(self, form)
 
-    def procure_form(self):
-        pass
+    def build_form(self):
+        """
+        This method will build a form object, that represents this command, not by using the form object stored itself,
+        but rather builds the form with the information about the command call from scratch, i.e. generating the body
+        string and the appendix dict based on the given information
+        Returns:
+        The Form object based on the given command
+        """
+        title = self.procure_form_title()
+        body = self.procure_form_body()
+        appendix = self.procure_form_appendix()
+        form = Form(title, body, appendix)
+        return form
+
+    def procure_form_appendix(self):
+        """
+        This method will create the appendix dictionary for the form based on what psoitional and kw arguments have
+        been passed to the CommandForm object
+        Returns:
+        The dictionary, containing the pos and kw args for the command call
+        """
+        return {"pos_args": self.pos_args, "kw_args": self.key_args}
 
     def procure_form_body(self):
         """
-
+        This method first creates the spec dictionary from the data about the command stored in the attributes of the
+        object, that means about the command name, the return and error mode and the amount of pos args. The it
+        assembles this dictionary into the actual body string list
         Returns:
-
+        The list of strings, which are supposed to be the lines of the body string of a form
         """
         string_list = []
         # Getting the spec of the form on which to base the body string
@@ -1129,8 +1154,7 @@ class CommandForm(CommandingForm):
             line_string = ':'.join([key, value])
             string_list.append(line_string)
         # Appending all the lines to a body, separated by newline characters
-        body = '\n'.join(string_list)
-        return body
+        return string_list
 
     def procure_form_spec(self):
         """
