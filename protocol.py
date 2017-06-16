@@ -1048,6 +1048,20 @@ class CommandForm(CommandingForm):
         # The keyword arguments for the command call
         self.key_args = {}
 
+    def procure_body_dict_raw(self):
+        """
+        This method will return a dictionary, which has one entry for every line in the body string, whose key is the
+        sub string before the split character ':' has occurred and the value being the substring after that character.
+        Returns:
+        The dictionary which assignes string keys to string values
+        """
+        body_dict = {}
+        # Getting the list of split lists of the body string
+        body_list_split = self.procure_body_lines_split()
+        for line_list in body_list_split:
+            body_dict[line_list[0]] = line_list[1]
+        return body_dict
+
     def procure_body_lines_split(self):
         """
         This method returns a list of lists, with one sub list for each line in the body string. The sub lists are the
