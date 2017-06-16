@@ -989,9 +989,52 @@ class CommandContext:
         return command_method_name
 
 
-class CommandingForm(Form):
+class CommandingForm:
     """
     INTERFACE
     """
-    def __init__(self, title, body, appendix, appendix_encoder=JsonAppendixEncoder):
-        Form.__init__(title, body, appendix, appendix_encoder)
+    def __init__(self, form):
+        self.form = form
+
+    @property
+    def title(self):
+        """
+        This method is the property getter for the title of the form. It will return the title of the wrapped form
+        Returns:
+        the string title of the form
+        """
+        return self.form.title
+
+    @property
+    def body(self):
+        """
+        This method is the property getter for the body of the form. It will return the body of the wrapped form
+        Returns:
+        The string of the body of the form
+        """
+        return self.form.body
+
+    @property
+    def appendix(self):
+        """
+        This is the property getter if the appendix object of the form. It will return the appendix of the wrapped form
+        Returns:
+        The appendix object of the wrapped form
+        """
+        return self.form.appendix
+
+    @property
+    def appendix_encoder(self):
+        """
+        This is the property getter method of the encoder object, that is responsible for the encoding and decoding
+        of the form object. It will simply return the encoder of the wrappped form
+        Returns:
+        The AppendixEncoder form, with which the form is being made network transmittable
+        """
+        return self.form.appendix_encoder
+
+
+class CommandForm(CommandingForm):
+
+    def __init__(self, form):
+        CommandingForm.__init__(self, form)
