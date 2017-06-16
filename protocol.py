@@ -1221,6 +1221,24 @@ class CommandForm(CommandingForm):
         except ValueError:
             raise TypeError("The pos_args entry is supposed to be integer type convertable")
 
+    def check_error_handle(self):
+        """
+        This method checks if the spec dictionary, which is based in the body string of the form, contains an entry
+        about the error handle of the command call.
+        Returns:
+        void
+        """
+        self.check_spec_key("error")
+
+    def check_return_handle(self):
+        """
+        This method checks if the spec dictionary, which is based on the body string of the form, contaisn an entry
+        about the return handle of the command call.
+        Returns:
+        void
+        """
+        self.check_spec_key("return")
+
     def check_type(self):
         """
         This method checks if the type of the underlying form matches the type of wrapper object, by checking if the
