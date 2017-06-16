@@ -1169,7 +1169,7 @@ class CommandForm(CommandingForm):
         spec["error"] = self.error_handle
         spec["return"] = self.return_handle
         spec["command"] = self.command_name
-        spec["pos_args"] = len(self.pos_args)
+        spec["pos_args"] = str(len(self.pos_args))
         return spec
 
     def procure_form_title(self):
@@ -1203,6 +1203,23 @@ class CommandForm(CommandingForm):
         void
         """
         self.check_spec_key("command")
+
+    def check_pos_args(self):
+        """
+        This method checks if the spec dictionary, which is based on the form body contains an entry, that is named
+        'pos_args', which is supposed to be a int number for the amount of pos args to be given to the command call.
+        Also checks the conversion.
+        Raises:
+            AttributeError: in case the entry is not even in the spec dict
+            TypeError: In case the value to the entry is not int convertable
+        Returns:
+        void
+        """
+        self.check_spec_key("pos_args")
+        try:
+            int(self.spec["pos_args"].strip())
+        except ValueError:
+            raise TypeError("The pos_args entry is supposed to be integer type convertable")
 
     def check_type(self):
         """
