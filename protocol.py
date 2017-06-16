@@ -1048,6 +1048,26 @@ class CommandForm(CommandingForm):
         # The keyword arguments for the command call
         self.key_args = {}
 
+    def procure_body_lines_split(self):
+        """
+        This method returns a list of lists, with one sub list for each line in the body string. The sub lists are the
+        split lists of the lines by the ':' character and each sub list therefore contains two strings.
+        Raises:
+            ValueError: In case the formatting of the form is wrong and there is either no ':' or more than one in
+                a line
+        Returns:
+        A list of lists, where each sub list has two string items
+        """
+        body_lines = self.body.split
+        body_lines_split = []
+        for line in body_lines:
+            split_line = line.split("\n")
+            # In case the line does not have exactly one ':' character raising error, because invalid format
+            if len(split_line) != 2:
+                raise ValueError("The CommandingProtocol dictates, that there is exactly one ':' per line in body!")
+            body_lines_split.append(split_line)
+        return body_lines_split
+
     def procure_body_lines(self):
         """
         This method will return a list os strings, where each string is one line of the body string. A line is defined
