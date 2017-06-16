@@ -1315,3 +1315,109 @@ class CommandForm(CommandingForm):
         if self.title != self.type:
             raise TypeError("The given form is not a command form!")
 
+
+class ReturnForm(CommandingForm):
+
+    def __init__(self, return_value):
+        self.type = "RETURN"
+        if isinstance(return_value, Form):
+            CommandingForm.__init__(self, return_value)
+            self.check_type()
+            self.return_value = self.procure_return_value()
+        else:
+            self.return_value = return_value
+            self.return_type = self.procure_return_type_string()
+            form = self.build_form()
+            CommandingForm.__init__(self, form)
+
+    def build_form(self):
+        """
+        This method first creates the title, the body and the appendix of a form from the data about the return
+        'per hand' and then creates a new Form object from this data and returns that
+        Returns:
+        the new Form object created
+        """
+        title = self.procure_form_title
+        body = self.procure_form_body()
+        appendix = self.procure_form_appendix()
+        form = Form(title, body, appendix)
+        return form
+
+    def procure_form_title(self):
+        """
+        This method returns the form title, which is the type attribute of the object
+        Returns:
+        The string title for the form
+        """
+        return self.type
+
+    def procure_form_body(self):
+        """
+        This method creates the form body list with one entry and that being the string of the return type
+        Returns:
+        The list with the body string lines
+        """
+        body_string = ':'.join(["type", self.return_type])
+        return [body_string]
+
+    def procure_form_appendix(self):
+        """
+        This method creates a dictionary with one entry being the return value of this object
+        Returns:
+        The assembled dictionary as the appendix of the form
+        """
+        return {"return": self.return_value}
+
+    def procure_return_value(self):
+        """
+        This method will extract the return value from the underlying form. The return value object is supposed to be
+        stored in the entry with the key 'return'
+        Returns:
+        The object which is supposed to be the return
+        """
+        self.check_appendix()
+        return_value = self.appendix["return"]
+        return return_value
+
+    def procure_return_type_string(self):
+        """
+        This method will get the string format of the type of the return value
+        Returns:
+        The string of the type of the return value object
+        """
+        return_type = self.procure_return_type()
+        return str(return_type)
+
+    def procure_return_type(self):
+        """
+        This method will get the type of the return value of the return form object
+        Returns:
+        The type object for the type of the return form object
+        """
+        return_type = type(self.return_value)
+        return return_type
+
+    def check_appendix(self):
+        """
+        This method checks if the appendix of the given form is actually a dictionary object and if that dictionary
+        contains an entry with the key "return" as it should do
+        Raises:
+            TypeError: In case the dictionary is not how it should be
+        Returns:
+        void
+        """
+        if not isinstance(self.appendix, dict) or 'return' not in self.appendix.keys():
+            raise TypeError("The appendix has to be a dict!")
+
+    def check_type(self):
+        """
+        This method checks if the type of the underlying form matches the type of wrapper object by checking if the
+        title matches the type of the object. In case not raises error
+        Raises:
+            TypeError
+        Returns:
+        void
+        """
+        if self.type != self.title:
+            raise TypeError("The given form is not return form!")
+
