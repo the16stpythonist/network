@@ -1103,6 +1103,12 @@ class CommandForm(CommandingForm):
         if isinstance(command, Form):
             CommandingForm.__init__(self, command)
             self.check_type()
+            # Loading the data from the form
+            self.command_name = self.procure_command_name()
+            self.pos_args = self.procure_positional_args()
+            self.key_args = self.procure_keyword_args()
+            self.error_handle = self.procure_error_handle()
+            self.return_handle = self.procure_return_handle()
         elif isinstance(command, str):
             # The string name of the command to be called in the remote location
             self.command_name = command
@@ -1178,6 +1184,48 @@ class CommandForm(CommandingForm):
         the string title for the form
         """
         return self.type
+
+    def procure_return_handle(self):
+        """
+        This method will get the return handle string from the spec dict
+        Returns:
+        the string return handle
+        """
+        self.check_return_handle()
+        return_handle = self.spec["return"]
+        return return_handle
+
+    def procure_error_handle(self):
+        """
+        This method will get the error handle from the spec dict
+        Returns:
+        The string error handle identifier
+        """
+        self.check_error_handle()
+        error_handle = self.spec["error"]
+        return error_handle
+
+    def procure_positional_args(self):
+        """
+        This method gets the positional arguments list from the appendix dict
+        Returns:
+        the list of positional arguments for the command call
+        """
+        pos_args = self.appendix["pos_args"]
+        if not isinstance(pos_args, list):
+            raise TypeError("The positional arguments are supposed to be list!")
+        return pos_args
+
+    def procure_keyword_args(self):
+        """
+        This method gets the key word argument dict from the appendix dict of the form
+        Returns:
+        The dictionary, that specifies the kewword arguments for the command call
+        """
+        kw_args = self.appendix["kw_args"]
+        if not isinstance(kw_args, dict):
+            raise TypeError("The keyword arguments are supposed to be dict!")
+        return kw_args
 
     def procure_command_name(self):
         """
