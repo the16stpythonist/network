@@ -1042,6 +1042,21 @@ class CommandingForm:
         body_lines = self.body.split("\n")
         return body_lines
 
+    def check_spec_key(self, key):
+        """
+        This method checks if there is a key of the given name in the spec dictionary. In case the key is not part of
+        the dict, an error will be risen.
+        Raises:
+            AttributeError
+        Args:
+            key: The string name of the key to be in the spec dictionary and therefore in the body of the form
+
+        Returns:
+        void
+        """
+        if key not in self.spec.keys():
+            raise AttributeError("The key {} was not specified in the body of the form".format(key))
+
     @property
     def title(self):
         """
@@ -1101,6 +1116,5 @@ class CommandForm(CommandingForm):
         Returns:
         void
         """
-        if "command" not in self.spec.keys():
-            raise AttributeError("The command name was not specified in the form!")
+        self.check_spec_key("command")
 
