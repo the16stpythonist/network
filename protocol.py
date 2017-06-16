@@ -996,6 +996,50 @@ class CommandingForm:
     def __init__(self, form):
         self.form = form
 
+    def procure_body_dict_raw(self):
+        """
+        This method will return a dictionary, which has one entry for every line in the body string, whose key is the
+        sub string before the split character ':' has occurred and the value being the substring after that character.
+        Returns:
+        The dictionary which assignes string keys to string values
+        """
+        body_dict = {}
+        # Getting the list of split lists of the body string
+        body_list_split = self.procure_body_lines_split()
+        for line_list in body_list_split:
+            body_dict[line_list[0]] = line_list[1]
+        return body_dict
+
+    def procure_body_lines_split(self):
+        """
+        This method returns a list of lists, with one sub list for each line in the body string. The sub lists are the
+        split lists of the lines by the ':' character and each sub list therefore contains two strings.
+        Raises:
+            ValueError: In case the formatting of the form is wrong and there is either no ':' or more than one in
+                a line
+        Returns:
+        A list of lists, where each sub list has two string items
+        """
+        body_lines = self.body.split
+        body_lines_split = []
+        for line in body_lines:
+            split_line = line.split("\n")
+            # In case the line does not have exactly one ':' character raising error, because invalid format
+            if len(split_line) != 2:
+                raise ValueError("The CommandingProtocol dictates, that there is exactly one ':' per line in body!")
+            body_lines_split.append(split_line)
+        return body_lines_split
+
+    def procure_body_lines(self):
+        """
+        This method will return a list os strings, where each string is one line of the body string. A line is defined
+        as the sum if characters until a new line character.
+        Returns:
+        The list of line strings for the body
+        """
+        body_lines = self.body.split("\n")
+        return body_lines
+
     @property
     def title(self):
         """
@@ -1047,48 +1091,4 @@ class CommandForm(CommandingForm):
         self.pos_args = []
         # The keyword arguments for the command call
         self.key_args = {}
-
-    def procure_body_dict_raw(self):
-        """
-        This method will return a dictionary, which has one entry for every line in the body string, whose key is the
-        sub string before the split character ':' has occurred and the value being the substring after that character.
-        Returns:
-        The dictionary which assignes string keys to string values
-        """
-        body_dict = {}
-        # Getting the list of split lists of the body string
-        body_list_split = self.procure_body_lines_split()
-        for line_list in body_list_split:
-            body_dict[line_list[0]] = line_list[1]
-        return body_dict
-
-    def procure_body_lines_split(self):
-        """
-        This method returns a list of lists, with one sub list for each line in the body string. The sub lists are the
-        split lists of the lines by the ':' character and each sub list therefore contains two strings.
-        Raises:
-            ValueError: In case the formatting of the form is wrong and there is either no ':' or more than one in
-                a line
-        Returns:
-        A list of lists, where each sub list has two string items
-        """
-        body_lines = self.body.split
-        body_lines_split = []
-        for line in body_lines:
-            split_line = line.split("\n")
-            # In case the line does not have exactly one ':' character raising error, because invalid format
-            if len(split_line) != 2:
-                raise ValueError("The CommandingProtocol dictates, that there is exactly one ':' per line in body!")
-            body_lines_split.append(split_line)
-        return body_lines_split
-
-    def procure_body_lines(self):
-        """
-        This method will return a list os strings, where each string is one line of the body string. A line is defined
-        as the sum if characters until a new line character.
-        Returns:
-        The list of line strings for the body
-        """
-        body_lines = self.body.split("\n")
-        return body_lines
 
