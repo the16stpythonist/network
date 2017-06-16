@@ -1097,15 +1097,62 @@ class CommandingForm:
 
 class CommandForm(CommandingForm):
 
-    def __init__(self, form):
-        CommandingForm.__init__(self, form)
+    def __init__(self, command, pos_args=[], kw_args={}, return_handle="reply", error_handle="reply"):
         # Initializing the attributes for the command form
-        # The string name of the command to be called in the remote location
-        self.command_name = ""
-        # The positional arguments for the command call
-        self.pos_args = []
-        # The keyword arguments for the command call
-        self.key_args = {}
+        if isinstance(command, Form):
+            CommandingForm.__init__(self, command)
+        elif isinstance(command, str):
+            # The string name of the command to be called in the remote location
+            self.command_name = command
+            # The positional arguments for the command call
+            self.pos_args = pos_args
+            # The keyword arguments for the command call
+            self.key_args = kw_args
+            # The handles are string identifiers about how the return value and the error are suppose to be treated
+            self.error_handle = error_handle
+            self.return_handle = return_handle
+
+    def procure_form(self):
+        pass
+
+    def procure_form_body(self):
+        """
+
+        Returns:
+
+        """
+        string_list = []
+        # Getting the spec of the form on which to base the body string
+        spec = self.procure_form_spec()
+        # Making a new line for each dictionary entry
+        for key, value in spec.items():
+            line_string = ':'.join([key, value])
+            string_list.append(line_string)
+        # Appending all the lines to a body, separated by newline characters
+        body = '\n'.join(string_list)
+        return body
+
+    def procure_form_spec(self):
+        """
+        This method assembled the spec dictionary from the data given for the command form
+        Returns:
+        the dictionary with the string key value pairs for a command form
+        """
+        spec = dict()
+        spec["error"] = self.error_handle
+        spec["return"] = self.return_handle
+        spec["command"] = self.command_name
+        spec["pos_args"] = len(self.pos_args)
+        return spec
+
+    @staticmethod
+    def procure_form_title():
+        """
+        This method simply returns the title for a command form which is the string "COMMAND"
+        Returns:
+        the string title for the form
+        """
+        return "COMMAND"
 
     def procure_command_name(self):
         """
