@@ -1107,6 +1107,19 @@ class CommandForm(CommandingForm):
         # The keyword arguments for the command call
         self.key_args = {}
 
+    def procure_command_name(self):
+        """
+        This method gets the command name for the command to be issued/represented by this form from the spec dict,
+        which is based on the information in the body of the form.
+        Returns:
+
+        """
+        # Checking for the existence of the command name in the spec of the body; raises AttributeError if not
+        self.check_command_name()
+        # Getting the command name from the dict and returning it
+        command_name = self.spec["command"].strip()
+        return command_name
+
     def check_command_name(self):
         """
         This method checks if the 'command' field was specified in the body of the form and raises an error if that is
