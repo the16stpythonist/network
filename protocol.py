@@ -249,7 +249,7 @@ class AppendixEncoder:
         Returns:
         a string representation of that object
         """
-        pass
+        raise NotImplementedError("This method has to be overwritten")
 
     @staticmethod
     def decode(byte_string):
@@ -262,7 +262,20 @@ class AppendixEncoder:
         Returns:
         Any kind of object, that was subject to the encoding process
         """
-        pass
+        raise NotImplementedError("This method has to be overwritten!")
+
+    @staticmethod
+    def is_serializable(obj):
+        """
+        This method is supposed to return a boolean value, that indicates whether the passed object can be serialized
+        by the method of the specific encoder, which sub classes this base class of appendix encoding.
+        Args:
+            obj: The object to attempt
+
+        Returns:
+        The boolean value if the value can be serialized
+        """
+        raise NotImplementedError("This method has to be overwritten!")
 
 
 class JsonAppendixEncoder(AppendixEncoder):
@@ -304,6 +317,22 @@ class JsonAppendixEncoder(AppendixEncoder):
         obj = json.loads(json_string)
         return obj
 
+    @staticmethod
+    def is_serializable(obj):
+        """
+        Returns whether the passed object can be json serialized or not
+        Args:
+            obj: The object in question
+
+        Returns:
+        the boolean value
+        """
+        try:
+            JsonAppendixEncoder.encode(obj)
+            return True
+        except:
+            return False
+
 
 class PickleAppendixEncoder(AppendixEncoder):
     """
@@ -336,6 +365,22 @@ class PickleAppendixEncoder(AppendixEncoder):
         """
         obj = pickle.loads(byte_string)
         return obj
+
+    @staticmethod
+    def is_serializable(obj):
+        """
+        This method returns whether or not the object passed can be serialized by pickle
+        Args:
+            obj: The object in question
+
+        Returns:
+        boolean value
+        """
+        try:
+            PickleAppendixEncoder.encode(obj)
+            return True
+        except:
+            return False
 
 
 class Form:
