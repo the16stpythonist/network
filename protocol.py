@@ -951,6 +951,29 @@ class CommandContext:
     def __init__(self):
         pass
 
+    def execute(self, form):
+        """
+        A CommandingForm subclass can be passed to this method and the action corresponding to the type of form will be
+        executed: In case it is a CommandForm, the command will be executed and the return Value will be returned, in
+        case it is a ReturnForm the stored return value will be returned
+        Args:
+            form: The CommandingForm subclass to be executed
+
+        Returns:
+        Either the return of the executed command or the return value of a remote executed function
+        """
+        if isinstance(form, CommandingForm):
+            if isinstance(form, CommandForm):
+                # Getting the method, that actually executes the behaviour for that command
+                command = self.lookup_command(form.command_name)
+                # Executing the command with the pos and kw args
+                return command(*form.pos_args, **form.key_args)
+            elif isinstance(form, ReturnForm):
+                # Simply returning the value stored in the form
+                return form.return_value
+        else:
+            raise TypeError("The form to execute is supposed to be a CommandingForm subclass")
+
     def lookup_command(self, command_name):
         """
         This method will use the command name given and first assemble the corresponding method name for that command
