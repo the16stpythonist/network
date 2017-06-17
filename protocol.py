@@ -951,7 +951,7 @@ class CommandContext:
     def __init__(self):
         pass
 
-    def execute(self, form):
+    def execute_form(self, form):
         """
         A CommandingForm subclass can be passed to this method and the action corresponding to the type of form will be
         executed: In case it is a CommandForm, the command will be executed and the return Value will be returned, in
