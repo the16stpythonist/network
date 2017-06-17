@@ -1021,6 +1021,53 @@ class CommandingForm:
         # The spec dict contains all the key value pairs specified in the body 
         self.spec = self.procure_body_dict_raw()
 
+    def build_form(self):
+        """
+        This method will be used by all the subclasses to create a form object, that represents the information of
+        the specialized commanding form, in the case, that the subclasses are not created by passing them a form upon
+        which they are based, but rather the more specific parameter set, that describes their behaviour.
+        Although for this to work, the sub classes of this class have to implement methods, that create and return the
+        body list of strings and the appendix data structure from their individual data set.
+        Returns:
+        The form object, that was created as a representation of the complex and specialized data set describing an
+        individual sub class of this base class form representation
+        """
+        title = self.procure_form_title()
+        body = self.procure_form_body()
+        appendix = self.procure_form_appendix()
+        form = Form(title, body, appendix)
+        return form
+
+    def procure_form_title(self):
+        """
+        This method creates the title of the form, that is supposed to represent the subclasses of the CommandingForm.
+        The title is per protocol defined as the type of the object, which is a upper case noun briefly describing
+        the purpose of the class
+        Returns:
+        The string of the title of the form to be created from the object, which is the type string of the class
+        """
+        return self.type
+
+    def procure_form_body(self):
+        """
+        HAS TO BE OVERWRITTEN BY SUB CLASS
+        This method will have to create and return a list of strings, that describes the body lines of a form object,
+        that represent the subclass.
+        Returns:
+        The list of strings for the body lines of the form to be created from the data of the sub class object
+        """
+        raise NotImplementedError("This method has to be overwritten by the sub class!")
+
+    def procure_form_appendix(self):
+        """
+        HAS TO BE OVERWRITTEN BY SUB CLASS
+        This method will have to create and return a data structure, that can be assignes as the appendix of a form and
+        that per protocol defines the sub class creating it as that form.
+        Returns:
+        The appendix data structure
+        """
+        raise NotImplementedError("This method has to be overwritten by the sub class!")
+
     def procure_body_dict_raw(self):
         """
         This method will return a dictionary, which has one entry for every line in the body string, whose key is the
@@ -1172,20 +1219,6 @@ class CommandForm(CommandingForm):
             form = self.build_form()
             CommandingForm.__init__(self, form)
 
-    def build_form(self):
-        """
-        This method will build a form object, that represents this command, not by using the form object stored itself,
-        but rather builds the form with the information about the command call from scratch, i.e. generating the body
-        string and the appendix dict based on the given information
-        Returns:
-        The Form object based on the given command
-        """
-        title = self.procure_form_title()
-        body = self.procure_form_body()
-        appendix = self.procure_form_appendix()
-        form = Form(title, body, appendix)
-        return form
-
     def procure_form_appendix(self):
         """
         This method will create the appendix dictionary for the form based on what psoitional and kw arguments have
@@ -1225,14 +1258,6 @@ class CommandForm(CommandingForm):
         spec["command"] = self.command_name
         spec["pos_args"] = str(len(self.pos_args))
         return spec
-
-    def procure_form_title(self):
-        """
-        This method simply returns the title for a command form which is the string "COMMAND"
-        Returns:
-        the string title for the form
-        """
-        return self.type
 
     def procure_return_handle(self):
         """
@@ -1294,7 +1319,7 @@ class CommandForm(CommandingForm):
         This method checks if the appendix object of the form is a dictionary and if that dict has the two entries for
         the pos args and the kw args, as it has to be with a command form
         Returns:
-        voif
+        void
         """
         # Checking if the appendix even is a dictionary
         dict_type = not isinstance(self.appendix, dict)
@@ -1365,27 +1390,6 @@ class ReturnForm(CommandingForm):
             self.return_type = self.procure_return_type_string()
             form = self.build_form()
             CommandingForm.__init__(self, form)
-
-    def build_form(self):
-        """
-        This method first creates the title, the body and the appendix of a form from the data about the return
-        'per hand' and then creates a new Form object from this data and returns that
-        Returns:
-        the new Form object created
-        """
-        title = self.procure_form_title
-        body = self.procure_form_body()
-        appendix = self.procure_form_appendix()
-        form = Form(title, body, appendix)
-        return form
-
-    def procure_form_title(self):
-        """
-        This method returns the form title, which is the type attribute of the object
-        Returns:
-        The string title for the form
-        """
-        return self.type
 
     def procure_form_body(self):
         """
