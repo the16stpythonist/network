@@ -1191,6 +1191,21 @@ class CommandingForm:
         """
         return self.form.appendix_encoder
 
+    @staticmethod
+    def assemble_body_line(key, value):
+        """
+        This method assembles the key and value strings for a line in the body of the form, by joining them with a
+        ':' used as separator
+        Args:
+            key:
+            value:
+
+        Returns:
+
+        """
+        body_line = ':'.join([key, value])
+        return body_line
+
 
 class CommandForm(CommandingForm):
 
@@ -1460,11 +1475,36 @@ class ErrorForm(CommandingForm):
         else:
             raise TypeError("The Error form has to be passed either form or exception object!")
 
-    def procure_form_title(self):
+    def procure_form_body(self):
         """
-        This method creates the form title from (or exactly as) the type string of the object
+        This method will create the body of a form, which is supposed to represent this object, from the exception
+        name of the exception, that was passed to the object for construction.
         Returns:
-
+        The list containing
         """
-        return self.type
+        # Getting the name of the exception
+        exception_name = self.procure_exception_name()
+        exception_message = self.procure_exception_message().replace("\n", "")
+        name_line = self.assemble_body_line("name", exception_name)
+        message_line = self.assemble_body_line("message", exception_message)
+        return [name_line, message_line]
 
+    def procure_exception_name(self):
+        """
+        This method extracts the exception name from the exception attribute of this class and then returns the string
+        name of the exception class
+        Returns:
+        The string name of the exception
+        """
+        exception_class = self.exception.__class__
+        exception_name = exception_class.__name__
+        return exception_name
+
+    def procure_exception_message(self):
+        """
+        This method will get the exception message from the exception object, that is the attribute of this object
+        Returns:
+        The string exception message
+        """
+        exception_message = str(self.exception)
+        return exception_message
