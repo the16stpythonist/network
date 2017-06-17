@@ -1080,6 +1080,33 @@ class CommandingForm:
         if key not in self.spec.keys():
             raise AttributeError("The key {} was not specified in the body of the form".format(key))
 
+    def check_type(self):
+        """
+        This method will check if the type of the object matches the type of the form, upon which it is based on
+        Returns:
+        void
+        """
+        if self.title != self.type:
+            raise TypeError("The form is not fit for a {} form type wrap object!".format(self.type))
+
+    @property
+    def type(self):
+        """
+        This method will return the type of the command form subclass. The functionality is purely based on the naming
+        convention of the CommandingForm subclasses, which has to be the type of the form followed by 'Form'. The
+        string of the type will then be returned as all upper case.
+        Examples:
+            If the type of the object would for example be Apple, then per naming convention the subclass would be
+            named 'AppleForm', this class would then return the string 'APPLE', which was extracted from the class name
+        Returns:
+        The upper case string of the type of the subclass
+        """
+        # Getting the class name and removing the Form at the end
+        class_name = self.__class__.__name__
+        type_name = class_name.replace("Form", "")
+        # Making it upper case and then returning it
+        return type_name.upper()
+
     @property
     def title(self):
         """
@@ -1121,7 +1148,6 @@ class CommandingForm:
 class CommandForm(CommandingForm):
 
     def __init__(self, command, pos_args=[], kw_args={}, return_handle="reply", error_handle="reply"):
-        self.type = "COMMAND"
         # Initializing the attributes for the command form
         if isinstance(command, Form):
             CommandingForm.__init__(self, command)
@@ -1326,23 +1352,10 @@ class CommandForm(CommandingForm):
         """
         self.check_spec_key("return")
 
-    def check_type(self):
-        """
-        This method checks if the type of the underlying form matches the type of wrapper object, by checking if the
-        title matches the type string. In case it does not raises error
-        Raises:
-            TypeError
-        Returns:
-        void
-        """
-        if self.title != self.type:
-            raise TypeError("The given form is not a command form!")
-
 
 class ReturnForm(CommandingForm):
 
     def __init__(self, return_value):
-        self.type = "RETURN"
         if isinstance(return_value, Form):
             CommandingForm.__init__(self, return_value)
             self.check_type()
@@ -1432,15 +1445,22 @@ class ReturnForm(CommandingForm):
         if not isinstance(self.appendix, dict) or 'return' not in self.appendix.keys():
             raise TypeError("The appendix has to be a dict!")
 
-    def check_type(self):
+
+class ErrorForm(CommandingForm):
+
+    def __init__(self, exception):
+        if isinstance(exception, Exception):
+            self.exception = exception
+        elif isinstance(exception, Form):
+            CommandingForm.__init__(self, exception)
+        else:
+            raise TypeError("The Error form has to be passed either form or exception object!")
+
+    def procure_form_title(self):
         """
-        This method checks if the type of the underlying form matches the type of wrapper object by checking if the
-        title matches the type of the object. In case not raises error
-        Raises:
-            TypeError
+        This method creates the form title from (or exactly as) the type string of the object
         Returns:
-        void
+
         """
-        if self.type != self.title:
-            raise TypeError("The given form is not return form!")
+        return self.type
 
