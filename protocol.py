@@ -1137,10 +1137,10 @@ class CommandingForm:
         Returns:
         A list of lists, where each sub list has two string items
         """
-        body_lines = self.body.split
+        body_lines = self.body.split()
         body_lines_split = []
         for line in body_lines:
-            split_line = line.split("\n")
+            split_line = line.split(":")
             # In case the line does not have exactly one ':' character raising error, because invalid format
             if len(split_line) != 2:
                 raise ValueError("The CommandingProtocol dictates, that there is exactly one ':' per line in body!")
@@ -1515,8 +1515,12 @@ class ErrorForm(CommandingForm):
     def __init__(self, exception):
         if isinstance(exception, Exception):
             self.exception = exception
+            form = self.build_form()
+            CommandingForm.__init__(form)
         elif isinstance(exception, Form):
             CommandingForm.__init__(self, exception)
+            self.check_type()
+            self.exception = self.procure_exception()
         else:
             raise TypeError("The Error form has to be passed either form or exception object!")
 

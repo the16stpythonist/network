@@ -386,3 +386,56 @@ class TestFormTransmission(unittest.TestCase):
         # Waiting for the form to be received
         received_form = receiver.receive_form()
         self.assertEqual(form.appendix, received_form.appendix)
+
+
+class TestCommandForm(unittest.TestCase):
+
+    def test_init(self):
+        """
+        Generally testing if the CommandForm object gets instanced correctly and if it correctly inherits from the base
+        class CommandingForm
+        Returns:
+        void
+        """
+        command = protocol.CommandForm("print")
+        self.assertIsInstance(command, protocol.CommandForm)
+        self.assertEqual(command.title, "COMMAND")
+        self.assertIsInstance(command, protocol.CommandingForm)
+
+    def test_command_init(self):
+        """
+        This method tests if the command gets initialized correctly if it is based in the command specifications, which
+        means passing the command name and the pos & kw args to the constructor
+        Returns:
+        void
+        """
+        pos_args = [12, "hallo"]
+        kw_args = {"one": 2}
+        command_name = "print"
+        command_form = protocol.CommandForm(command_name, pos_args, kw_args)
+        # Testing the attributes of the command form object itself
+        self.assertEqual(command_form.command_name, command_name)
+        self.assertEqual(command_form.pos_args, pos_args)
+        self.assertEqual(command_form.key_args, kw_args)
+        # Testing the form attributes created from the command data
+        self.assertEqual(command_form.title, "COMMAND")
+        # Testing for correct appendix
+        appendix = {"pos_args": pos_args, "kw_args": kw_args}
+        self.assertDictEqual(command_form.appendix, appendix)
+        # Testing for correct body
+        body = sorted(["command:print", "pos_args:2", "return:reply", "error:reply"])
+        actual_body = sorted(command_form.body.split("\n"))
+        self.assertListEqual(actual_body, body)
+
+    def test_form_init(self):
+        title = "COMMAND"
+        body = ["command:print", "return:reply", "error:reply", "pos_args:2"]
+        appendix = {"pos_args": ["hallo", "hallo"], "kw_args":{}}
+        form = protocol.Form(title, body, appendix)
+        # Creating the CommandForm from the Form object
+        command_form = protocol.CommandForm(form)
+        # Testing the parameters
+        self.assertEqual(command_form.command_name, "print")
+        self.assertEqual(command_form.return_handle, "reply")
+        self.assertEqual(command_form.error_handle, "reply")
+        self.assertListEqual(command_form.pos_args, ["hallo", "hallo"])
