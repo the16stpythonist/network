@@ -1520,6 +1520,20 @@ class ErrorForm(CommandingForm):
         else:
             raise TypeError("The Error form has to be passed either form or exception object!")
 
+    def procure_form_appendix(self):
+        """
+        This method will create the appendix of the form, which is supposed to represent this object. If the
+        appendix encoder used for the form is able to encode the exception object itself a dictionary will be sent,
+        that only has ine item with the key 'error' and tge value being the exception object. If the encoder is not
+        able to serialize the exception, an empty dict will be used as appendix
+        Returns:
+        dict
+        """
+        if self.appendix_encoder.is_serializable(self.exception):
+            return {"error": self.exception}
+        else:
+            return {}
+
     def procure_form_body(self):
         """
         This method will create the body of a form, which is supposed to represent this object, from the exception
