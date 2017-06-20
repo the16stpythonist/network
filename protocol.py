@@ -1345,6 +1345,7 @@ class CommandForm(CommandingForm):
         Returns:
         the list of positional arguments for the command call
         """
+        self.check_pos_args()
         pos_args = self.appendix["pos_args"]
         if not isinstance(pos_args, list):
             raise TypeError("The positional arguments are supposed to be list!")

@@ -390,6 +390,10 @@ class TestFormTransmission(unittest.TestCase):
 
 class TestCommandForm(unittest.TestCase):
 
+    std_title = "COMMAND"
+    std_body = ["command:print", "return:reply", "error:reply", "pos_arg:0"]
+    std_appendix = {"pos_args": [], "kw_args": {}}
+
     def test_init(self):
         """
         Generally testing if the CommandForm object gets instanced correctly and if it correctly inherits from the base
@@ -428,6 +432,11 @@ class TestCommandForm(unittest.TestCase):
         self.assertListEqual(actual_body, body)
 
     def test_form_init(self):
+        """
+        This method tests for correct init if the CommandForm is created by passing Form
+        Returns:
+
+        """
         title = "COMMAND"
         body = ["command:print", "return:reply", "error:reply", "pos_args:2"]
         appendix = {"pos_args": ["hallo", "hallo"], "kw_args":{}}
@@ -439,3 +448,51 @@ class TestCommandForm(unittest.TestCase):
         self.assertEqual(command_form.return_handle, "reply")
         self.assertEqual(command_form.error_handle, "reply")
         self.assertListEqual(command_form.pos_args, ["hallo", "hallo"])
+
+    def test_wrong_form_title(self):
+        """
+        Testing for TypeError in case of wrong form title
+        Returns:
+        void
+        """
+        # Testing fo a just slightly different title with lower case
+        title = "Command"
+        form = protocol.Form(title, self.std_body, self.std_appendix)
+        with self.assertRaises(TypeError):
+            protocol.CommandForm(form)
+        # Testing for a different form title
+        title = "RETURN"
+        form = protocol.Form(title, self.std_body, self.std_appendix)
+        with self.assertRaises(TypeError):
+            protocol.CommandForm(form)
+
+    def test_missing_param_body(self):
+        """
+        Testing if exceptions raised in case a parameter is missing in the body of the form
+        Returns:
+        void
+        """
+        # Creating the faulty form with the command name missing
+        body = ["return:reply", "error:reply", "pos_args:0"]
+        form = protocol.Form(self.std_title, body, self.std_appendix)
+        with self.assertRaises(AttributeError):
+            protocol.CommandForm(form)
+        # Creating form with error spec missing
+        body = ["return:reply", "command:print", "pos_args:0"]
+        form = protocol.Form(self.std_title, body, self.std_appendix)
+        with self.assertRaises(AttributeError):
+            protocol.CommandForm(form)
+        # Creating form with return spec missing
+        body = ["error:reply", "command:print", "pos_args:0"]
+        form = protocol.Form(self.std_title, body, self.std_appendix)
+        with self.assertRaises(AttributeError):
+            protocol.CommandForm(form)
+        # Creating form with pos_args spec missing
+        body = ["return:reply", "command:print", "error:reply"]
+        form = protocol.Form(self.std_title, body, self.std_appendix)
+        with self.assertRaises(AttributeError):
+            protocol.CommandForm(form)
+        # Testing for empty form
+        form = protocol.Form(self.std_title, [], self.std_appendix)
+        with self.assertRaises(AttributeError):
+            protocol.CommandForm(form)
