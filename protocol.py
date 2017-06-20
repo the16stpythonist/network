@@ -1567,3 +1567,33 @@ class ErrorForm(CommandingForm):
         """
         exception_message = str(self.exception)
         return exception_message
+
+    def procure_exception(self):
+        """
+        This method will create an exception object from the data given by the underlying form object. In case there is
+        only an empty appendix (which means that the appendix encoder cannot encode exception objects) a new exception
+        object will be created by dynamically interpreting the error name and message in the body of the form. In case
+        there is an appendix using the exception object stored in the appendix to return
+        Returns:
+        An exception object, as specified by the form
+        """
+        if len(self.appendix) == 0:
+            # Creating the python expression of creating a new exception object as a string expression from the name
+            # and message of the exception from the body
+            eval_string = self.procure_exception_eval_string()
+            # Dynamically interpreting that string and retunring the new exception object
+            return eval(eval_string)
+        else:
+            return self.appendix["error"]
+
+    def procure_exception_eval_string(self):
+        """
+        This method will create a string expression, that represents a python source code statement of creating a new
+        exception object with using the excpetion name, specified by the body as the class to create and the message
+        given in the body as the string parameter for the exception object creation.
+        Returns:
+        A string, that is a python statement
+        """
+        exception_name = self.spec["name"]
+        exception_message = self.spec["message"]
+        return ''.join([exception_name, "('", exception_message, "')"])
