@@ -1517,7 +1517,7 @@ class ErrorForm(CommandingForm):
         if isinstance(exception, Exception):
             self.exception = exception
             form = self.build_form()
-            CommandingForm.__init__(form)
+            CommandingForm.__init__(self, form)
         elif isinstance(exception, Form):
             CommandingForm.__init__(self, exception)
             self.check_type()
@@ -1602,3 +1602,165 @@ class ErrorForm(CommandingForm):
         exception_name = self.spec["name"]
         exception_message = self.spec["message"]
         return ''.join([exception_name, "('", exception_message, "')"])
+
+
+class CommandingServer(threading.Thread):
+
+    def __init__(self, ip, port, command_context, socket_family=socket.AF_INET, socket_type=socket.SOCK_STREAM):
+        # Initializing the super class
+        threading.Thread.__init__(self)
+        self.address = (ip, port)
+        # Creating a container to later store the address of the connected client and the socket
+        self.connection_address = None
+        self.sock = None
+
+        self.command_context = command_context
+        self.socket_family = socket_family
+        self.socket_type = socket_type
+        # Creating a new socket, that will be used to set up a server
+        self.server_socket = self.create_socket()
+
+        # Setting the running state variable to True
+        self.running = True
+
+    def run(self):
+
+        while True:
+            try:
+                # Creating a new socket object for the server
+                self.server_socket = self.create_socket()
+                # Binding the socket to the address given
+                self.bind_socket()
+                # Making the socket listen
+                self.server_socket.listen(3)
+                # Accepting the first incoming connection
+                self.sock, self.connection_address = self.server_socket.accept()
+
+                # Making the connection
+
+            except socket.error as socket_error:
+                self.sock = None
+
+            except ConnectionError as connection_error:
+                pass
+
+    def _receive_bytes_until_byte(self, byte_character, timeout=10):
+        """
+        This method will receive a
+        Args:
+            timeout:
+
+        Returns:
+
+        """
+        self._ensure_connected()
+        sock_wrap = SocketWrapper(self.sock, True)
+        received = sock_wrap.receive_until_character(byte_character, 100, timeout, False)
+        sock_wrap.release_socket()
+        return received
+
+    def bind_socket(self):
+        """
+        This method will bind the socket, which is stored in the socket attribute of the object to the address, that
+        is specified by the address attrubute of the server
+        Returns:
+        void
+        """
+        self.server_socket.bind(self.address)
+
+    def create_socket(self):
+        """
+        This method creates a new socket object by using the specification of the socket family and the socket type
+        given by the init of the object
+        Returns:
+        A new socket object
+        """
+        sock = socket.socket(self.socket_family, self.socket_type)
+        return sock
+
+    def _ensure_connected(self):
+        """
+        This method will raise an error in case the server is not connected, thus ensuring for everything after the
+        call, that the server is connected.
+        Raises:
+            ConnectionError: In case the server is not connected
+        Returns:
+        void
+        """
+        if not self.connected:
+            raise ConnectionError("The CommandingServer is not connected")
+
+    def _check_command_context(self):
+        """
+        This method checks if the object passed to specify the command context is actually a CommandContext object
+        Returns:
+        void
+        """
+        if not isinstance(self.command_context, CommandContext):
+            raise TypeError("The command context parameter of the Commanding server has to be CommandContext")
+
+    def _check_address(self):
+        """
+        This method checks whether the values passed as the ip and the port on which the serve is supposed to operate
+        on are actually string and int as they have to be, to be passed to the socket.
+        Returns:
+        void
+        """
+        # Checking the ip if it is a string
+        self._check_ip()
+        # Checking the port if it is a int
+        self._check_port()
+
+    def _check_port(self):
+        """
+        This method checks, if the value passed as port of the server to operate on and then set as attribute of the
+        object has the correct data type, which is supposed to be integer
+        Raises:
+            TypeError: In case the data type of the port attr is not int
+        Returns:
+        void
+        """
+        if not isinstance(self.port, int):
+            raise TypeError("the port of the CommandingServer has to be a int")
+
+    def _check_ip(self):
+        """
+        This method checks if the type of the specified ip is correctly given as string
+        Raises:
+            TypeError: In case the type of the ip property is not string
+        Returns:
+        void
+        """
+        if not isinstance(self.ip, str):
+            raise TypeError("The ip address has to be specified as a string")
+
+    @property
+    def ip(self):
+        """
+        This is the getter method for the ip address of the socket connection, actually being stored as part of the
+        address tuple
+        Returns:
+        The string ip address
+        """
+        return self.address[0]
+
+    @property
+    def port(self):
+        """
+        This is the getter method for the port of the socket connection, actually being stored as part of the address
+        tuple
+        Returns:
+        The int port
+        """
+        return self.address[1]
+
+    @property
+    def connected(self):
+        """
+        This is the getter method of the state variable of the server being connected to a client or not. This is bieng
+        calculated by checking if the servers connection socket is None or not, as the attribute is being reset to None
+        whenever the connection is being terminated.
+        Returns:
+        The boolean value of the server being connected or not
+        """
+        return self.sock is not None
