@@ -1594,7 +1594,7 @@ class ErrorForm(CommandingForm):
     def procure_exception_eval_string(self):
         """
         This method will create a string expression, that represents a python source code statement of creating a new
-        exception object with using the excpetion name, specified by the body as the class to create and the message
+        exception object with using the excepetion name, specified by the body as the class to create and the message
         given in the body as the string parameter for the exception object creation.
         Returns:
         A string, that is a python statement
@@ -1644,14 +1644,44 @@ class CommandingServer(threading.Thread):
             except ConnectionError as connection_error:
                 pass
 
-    def _receive_bytes_until_byte(self, byte_character, timeout=10):
+    def receive_str_until_char(self, character, timeout=10):
         """
-        This method will receive a
+        This method will receive a string until a certain character is read in the socket stream
         Args:
-            timeout:
+            character: The string character, after which to terminate the receiving
+            timeout: The int amount of time max. for receiving one character from the socket connection
 
         Returns:
+        The received string up to the point of the break character
+        """
+        self._check_character(character)
+        bytes_string = self._receive_bytes_until_char(character, timeout)
+        string = bytes_string.decode()
+        return string
 
+    def _receive_bytes_until_char(self, character, timeout=10):
+        """
+        This method will receive a bytes string until a certain character is read in the socket stream
+        Args:
+            character: The string character, after which to terminate the receiving
+            timeout: The int amount of max. time for one character receive from socket
+
+        Returns:
+        The bytes string received up until the break character specified was read
+        """
+        # Turning the string object into a bytes string
+        byte_character = character.encode()
+        return self._receive_bytes_until_byte(byte_character, timeout)
+
+    def _receive_bytes_until_byte(self, byte_character, timeout=10):
+        """
+        This method will receive a byte string from the connection socket until a certain break character occurs.
+        Creates a SocketWrapper object and puts the socket into it.
+        Args:
+            timeout: The max time per character to receive in seconds
+
+        Returns:
+        The received byte string
         """
         self._ensure_connected()
         sock_wrap = SocketWrapper(self.sock, True)
@@ -1733,6 +1763,25 @@ class CommandingServer(threading.Thread):
         """
         if not isinstance(self.ip, str):
             raise TypeError("The ip address has to be specified as a string")
+
+    @staticmethod
+    def _check_character(character):
+        """
+        This method checks if the passed object is type string and if it has length one
+        Raises:
+            TypeError: in case the passed object is not a string
+            ValueError: In case the passed string is not length one
+        Args:
+            character: The object to check
+
+        Returns:
+        void
+        """
+        # Checking for correct param
+        if not (isinstance(character, str)):
+            raise TypeError("The character for receive until has to be string")
+        if not len(character) == 1:
+            ValueError("The string for receive character has to have exactly length one")
 
     @property
     def ip(self):
