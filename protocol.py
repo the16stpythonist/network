@@ -1614,7 +1614,18 @@ class CommandingSocketBase(threading.Thread):
         self.socket_family = socket_family
         self.socket_type = socket_type
 
+        # This will be the socket used for the connection
         self.sock = None
+
+    def send_command_context_type(self):
+        """
+        This method will send the string representation of the command context class, so that on the remote side of the
+        communication it can be compared, if the server and client are on the same page
+        Returns:
+
+        """
+        command_context_type_string = str(self.command_context_class)
+        self.sock.sendall(command_context_type_string)
 
     def receive_line(self):
         """
@@ -1776,6 +1787,17 @@ class CommandingSocketBase(threading.Thread):
         """
         return self.sock is not None
 
+    @property
+    def command_context_class(self):
+        """
+        Both the client and the server are supposed to implement a property for getting the type of the command context
+        object, which they are based on. This function is supposed to return the class specification of the command
+        context object
+        Returns:
+        The class object of the respective command contect, on which the object is based on
+        """
+        raise NotImplementedError()
+
 
 class CommandingServer(CommandingSocketBase):
 
@@ -1817,15 +1839,6 @@ class CommandingServer(CommandingSocketBase):
             finally:
                 self.sock = None
 
-    def send_command_context_type(self):
-        """
-        This method will receive the type string of the command
-        Returns:
-
-        """
-        command_context_type_string = str(self.command_context.__class__)
-        self.sock.sendall(command_context_type_string)
-
     def bind_socket(self):
         """
         This method will bind the socket, which is stored in the socket attribute of the object to the address, that
@@ -1843,3 +1856,12 @@ class CommandingServer(CommandingSocketBase):
         """
         if not isinstance(self.command_context, CommandContext):
             raise TypeError("The command context parameter of the Commanding server has to be CommandContext")
+
+    @property
+    def command_context_class(self):
+        """
+        This function returns the class object of the command context object, on which the server is based on
+        Returns:
+        The class object
+        """
+        return self.command_context.__class__
