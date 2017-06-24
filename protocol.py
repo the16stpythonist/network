@@ -434,6 +434,109 @@ class Connection:
         if not len(byte) == 1:
             raise ValueError("the byte param object has to be a byte string of the length one")
 
+    @staticmethod
+    def _check_length(length):
+        """
+        This is a utility function for checking if a passed value for the length of a string is actually a int value
+        and if that value is positive.
+        Args:
+            length: The value in question
+
+        Returns:
+        void
+        """
+        if not isinstance(length, int):
+            raise TypeError("The length parameter has to be int")
+        if not length > 0:
+            raise ValueError("The length has to be a positive value")
+
+
+class SocketConnection(Connection):
+
+    def __init__(self, sock):
+        Connection.__init__(self)
+        self.sock = sock
+
+    def receive_length_string(self, length, timeout):
+        """
+        This method will receive a specified length of string
+        Args:
+            length: The int length of the string to receive
+            timeout: The max amount of time for the reception
+
+        Returns:
+        The received string
+        """
+        byte_string = self.receive_length_bytes(length, timeout)
+        return byte_string.decode()
+
+    def receive_length_bytes(self, length, timeout):
+        """
+        This method will receive a specified length of byte string
+        Args:
+            length: The length of the byte string to receive
+            timeout: The max amount of time for the reception
+
+        Returns:
+        The received byte string
+        """
+        self._check_timeout(timeout)
+        self._check_length(length)
+        # Setting up the list wich will contain the data already received
+        data = b''
+        # Setting up the time for the timeout detection
+        start_time = time.time()
+        while len(data) < length:
+            received = self.sock.recv(length - len(data))
+
+            # Checking if there is nothing to receive anymore, before the specified amount was reached
+            if not received:
+                raise EOFError("Only received ({}|{}) bytes from the socket".format(len(bytes), bytes))
+
+            # Checking for overall timeout
+            time_delta = time.time() - start_time
+            if time_delta > timeout:
+                raise TimeoutError("{} Bytes could not be received in {} seconds".format(length, timeout))
+
+            data += received
+
+        return data
+
+    def wait_length_string(self, length):
+        """
+        This method will wait an indefinite amount of time to receive a string of the specified length
+        Args:
+            length: The int length of the string to receive
+
+        Returns:
+        The received string
+        """
+        bytes_string = self.wait_length_bytes(length)
+        return bytes_string.decode()
+
+    def wait_length_bytes(self, length):
+        """
+        This method will wait an indefinite amount of time to receive a bytes string of the specified length
+        Args:
+            length: The length of the byte string to receive
+
+        Returns:
+        The received byte string
+        """
+        self._check_length(length)
+        # Setting up the list which will contain the data already received
+        data = b''
+        while len(data) < length:
+            received = self.sock.recv(length - len(data))
+
+            # Checking if there is nothing to receive anymore, before the specified amount was reached
+            if not received:
+                raise EOFError("Only received ({}|{}) bytes from the socket".format(len(bytes), bytes))
+
+            data += received
+
+        return data
+
 
 # THE FORM TRANSMISSION PROTOCOL
 
