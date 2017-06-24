@@ -221,9 +221,40 @@ class SocketWrapper:
 
 
 class Connection:
+    """
+    ABSTRACT BASE CLASS
 
+    GENERAL:
+    One problem one might encounter with networking code is that while sockets are the most basic construct to be used
+    and therefore also to be preferred as the basic building block of network code such as the form transmission
+    protocol, the sockets might also not always works with other frameworks or even the platform the code is running on.
+    A good example would be using Python with kivy on android, sockets themselves behave very problematic and as a
+    developer your best choice is to use the twisted framework for network com. And if one wishes to use the protocol
+    framework even then, all of the classes would have to be rewritten, but if a abstract encapsulation of the network
+    such as the Connection objects would be used as the basic building block for the networking, the twisted
+    functionality could simply be implemented and hidden behind a new type of Connection instance and the whole
+    frameworks would still work.
+
+    This abstract implementation also allows the protocol framework to be used in other fields as well, for example a
+    Connection object could be build as a shared state between two Threads, or a Pipe between two processes. Even
+    a really slow running communication based on emails could be capsuled to be managed by the protocol framework.
+
+    The Connection object is build as something like a bidirectional socket, that implements behaviour for sending
+    string data as well as receiving string and bytes data.
+    """
     def __init__(self):
         pass
+
+    def sendall_string(self, string):
+        """
+        A Connection object obviously has to implement the functionality of sending a string over the connection
+        Args:
+            string: The string to be sent to the the other side of the connection
+
+        Returns:
+        void
+        """
+        raise NotImplementedError()
 
     def receive_length(self, length, timeout):
         """
