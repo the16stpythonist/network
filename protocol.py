@@ -220,6 +220,110 @@ class SocketWrapper:
         self.type = self.sock.type
 
 
+class Connection:
+
+    def __init__(self):
+        pass
+
+    def receive_length(self, length, timeout):
+        """
+        A Connection object has to be able to receive only a certain length of string from the communication
+        Args:
+            length: The amount of characters or the int length of the string supposed to be receuved from the
+            connection.
+            timeout: The float amount of time the reception of the string is allowed to take until a Timeout Error
+                is being raised
+
+        Returns:
+        The received string
+        """
+        raise NotImplementedError()
+
+    def wait_length(self, length):
+        """
+        The wait method is equal to the equally named receive method except for the fact, that it does not implement a
+        timeout on purpose for situations where one wants to infinitely wait to receive from a connection.
+        Args:
+            length: The amount of characters or the int length of the string supposed to be receuved from the
+            connection.
+
+        Returns:
+        The received string
+        """
+        raise NotImplementedError()
+
+    def receive_line(self, timeout):
+        """
+        A Connection object has to be able to receive a line from the stream
+        Args:
+            timeout: The float amount of time the reception of the string is allowed to take until a Timeout Error
+                is being raised
+        Returns:
+        A string up until a new_line character has been received from the connection
+        """
+        raise NotImplementedError()
+
+    def receive_string_until_character(self, character, timeout):
+        """
+        A Connection object has to be able to receive a string until a special break character has been received
+        Args:
+            character: The string character with the length one, which is supposed to be received
+            timeout: The float amount of time the reception of the string is allowed to take until a Timeout Error
+                is being raised
+        Raises:
+            TimeoutError: In case the process of receiving exceeds the amount of time specified
+        Returns:
+        A string up until a special line character has been received
+        """
+        raise NotImplementedError()
+
+    def wait_string_until_character(self, character):
+        """
+        The wait method is equal to the equally named receive method except for the fact, that it does not implement a
+        timeout on purpose for situations where one wants to infinitely wait to receive from a connection.
+        Args:
+            character: The character after which to return the substring up to that point
+
+        Returns:
+        The string received
+        """
+        raise NotImplementedError()
+
+    @staticmethod
+    def _check_timeout(timeout):
+        """
+        This is a utility method, that checks if a passed value for a timeout is actually a int or a float
+        Raises:
+            TypeError: If the specified timeout value is not a proper value of float or int type
+        Args:
+            timeout: The timeout value to check
+
+        Returns:
+        void
+        """
+        if not (isinstance(timeout, int) or isinstance(timeout, float)):
+            raise TypeError("The timeout has to be a int value")
+
+    @staticmethod
+    def _check_character(character):
+        """
+        This is a utility method, that checks if a passed value for a character param is actually a string and also if
+        that string actually has the length one
+        Raises:
+            TypeError: In case the passed value is not even a string
+            ValueError: In case the passed string is not of the length one
+        Args:
+            character: The value to check
+
+        Returns:
+        void
+        """
+        if not isinstance(character, str):
+            raise TypeError("The character has to be a string")
+        if not len(character) == 1:
+            raise ValueError("The character string has to be length one")
+
+
 # THE FORM TRANSMISSION PROTOCOL
 
 class AppendixEncoder:
@@ -1830,7 +1934,15 @@ class CommandingServer(CommandingSocketBase):
                 # Accepting the first incoming connection
                 self.sock, self.connection_address = self.server_socket.accept()
 
+                self.validate()
+                while True:
+                    pass
+
             except socket.error as socket_error:
+                pass
+
+            except ConnectionAbortedError as connection_aborted:
+                # This is the case if the type of command contexts does not match between server and client
                 pass
 
             except ConnectionError as connection_error:
@@ -1838,6 +1950,19 @@ class CommandingServer(CommandingSocketBase):
 
             finally:
                 self.sock = None
+
+    def validate(self):
+        """
+        This method checks, if the server and the client have the same command context to work with
+        Returns:
+        void
+        """
+        # Sending the type of command context in which the server is based on to the client
+        self.send_command_context_type()
+        # Receiving the type of command context on which the client is based on from the client
+        client_command_context = self.receive_line()
+        if str(self.command_context_class) != client_command_context:
+            raise ConnectionAbortedError("The client and server do not have the same command context")
 
     def bind_socket(self):
         """
