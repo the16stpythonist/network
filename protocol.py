@@ -537,6 +537,103 @@ class SocketConnection(Connection):
 
         return data
 
+    def receive_string_until_character(self, character, timeout):
+        """
+        This function will receive from the socket until the specified break character has been read in the stream.
+        After that the substring, that has been received up until that point will be returned
+        Args:
+            character: the string break character
+            timeout: The max amount of time for the reception
+
+        Returns:
+        The received string
+        """
+        self._check_character(character)
+        byte_character = character.encode()
+        bytes_string = self.receive_bytes_until_byte(byte_character, timeout)
+        return bytes_string.decode()
+
+    def receive_bytes_until_byte(self, byte, timeout):
+        """
+        This function will receive the bytes string and return the sub string until a special break byte character
+        has occurred in the stream
+        Args:
+            byte: The byte string character after which to return the sub string before
+            timeout: The max time for the reception
+
+        Returns:
+        The received bytes string
+        """
+        # Raising error in case wrong values have been passed as parameters
+        self._check_byte(byte)
+        self._check_timeout(timeout)
+        # Setting up for the timeout watch
+        start_time = time.time()
+        # The list of byte string data, which is later going to contain the string to return
+        data = []
+        # The temporary string received
+        received = b''
+        while byte != received:
+            received = self.sock.recv(1)
+
+            # Checking if there is nothing to receive anymore, before the specified amount was reached
+            if not received:
+                raise EOFError("Only received ({}|{}) bytes from the socket".format(len(bytes), bytes))
+
+            # Checking for overall timeout
+            time_delta = time.time() - start_time
+            if time_delta > timeout:
+                raise TimeoutError("{} Bytes could not be received in {} seconds".format(length, timeout))
+
+            data.append(received)
+        # Removing the break character from the data list
+        data.pop(-1)
+        # Returning the assembled bytes string
+        return b''.join(data)
+
+    def wait_string_until_character(self, character):
+        """
+        This method will wait an indefinite amount of time until the break character has been received and then
+        return the sub strung received up to that point
+        Args:
+            character: The string character to act as breaking point in the reception
+
+        Returns:
+        The received string
+        """
+        self._check_character(character)
+        byte_character = character.encode()
+        bytes_string = self.wait_bytes_until_byte(byte_character)
+        return bytes_string.decode()
+
+    def wait_bytes_until_byte(self, byte):
+        """
+        This method will wait an indefinite amount of time until the break byte character has been received and then
+        return the sub string received up to that point.
+        Args:
+            byte: The byte string character
+
+        Returns:
+        The received byte string
+        """
+        # Raising error in case wrong values have been passed as parameters
+        self._check_byte(byte)
+        # The list of byte string data, which is later going to contain the string to return
+        data = []
+        # The temporary string received
+        received = b''
+        while byte != received:
+            received = self.sock.recv(1)
+
+            # Checking if there is nothing to receive anymore, before the specified amount was reached
+            if not received:
+                raise EOFError("Only received ({}|{}) bytes from the socket".format(len(bytes), bytes))
+
+            data.append(received)
+        # Removing the break character from the data list
+        data.pop(-1)
+        # Returning the assembled bytes string
+        return b''.join(data)
 
 # THE FORM TRANSMISSION PROTOCOL
 
