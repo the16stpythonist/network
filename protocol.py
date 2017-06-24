@@ -256,7 +256,18 @@ class Connection:
         """
         raise NotImplementedError()
 
-    def receive_length(self, length, timeout):
+    def sendall_bytes(self, bytes_string):
+        """
+        A Connection object also has to be able to send raw bytes data over the connection
+        Args:
+            bytes_string: The bytes string object to be sent
+
+        Returns:
+        void
+        """
+        raise NotImplementedError()
+
+    def receive_length_string(self, length, timeout):
         """
         A Connection object has to be able to receive only a certain length of string from the communication
         Args:
@@ -270,7 +281,21 @@ class Connection:
         """
         raise NotImplementedError()
 
-    def wait_length(self, length):
+    def receive_length_bytes(self, length, timeout):
+        """
+        A Connection object has to be able to receive bytes data of a certain (character-) length correctly
+        Args:
+            length: The amount of characters or the int length of the string supposed to be receuved from the
+            connection.
+            timeout: The float amount of time the reception of the string is allowed to take until a Timeout Error
+                is being raised
+
+        Returns:
+        The received bytes string object
+        """
+        raise NotImplementedError()
+
+    def wait_length_string(self, length):
         """
         The wait method is equal to the equally named receive method except for the fact, that it does not implement a
         timeout on purpose for situations where one wants to infinitely wait to receive from a connection.
@@ -280,6 +305,19 @@ class Connection:
 
         Returns:
         The received string
+        """
+        raise NotImplementedError()
+
+    def wait_length_bytes(self, length):
+        """
+        This method will be used to wait an indefinte amount of time for the reception of a byte string from the
+        connection
+        Args:
+            length: The amount of characters or the int length of the string supposed to be receuved from the
+            connection.
+
+        Returns:
+        the received byte string
         """
         raise NotImplementedError()
 
@@ -308,6 +346,20 @@ class Connection:
         """
         raise NotImplementedError()
 
+    def receive_bytes_until_byte(self, byte, timeout):
+        """
+        This method will be used to receive a byte string until a special break character (also byte string) occurred
+        in the stream
+        Args:
+            byte: The byte string character after which to return the received sub byte string
+            timeout: The float amount of time the reception of the string is allowed to take until a Timeout Error
+                is being raised
+
+        Returns:
+        The received byte string
+        """
+        raise NotImplementedError()
+
     def wait_string_until_character(self, character):
         """
         The wait method is equal to the equally named receive method except for the fact, that it does not implement a
@@ -317,6 +369,18 @@ class Connection:
 
         Returns:
         The string received
+        """
+        raise NotImplementedError()
+
+    def wait_bytes_until_byte(self, byte):
+        """
+        This method will be used to wait an indefinite amount of time until a special break byte string will be read
+        from the stream and then return the byte string received up until then.
+        Args:
+            byte: The byte string object of length one after which the received is to be returned
+
+        Returns:
+        The received bytes string
         """
         raise NotImplementedError()
 
@@ -353,6 +417,22 @@ class Connection:
             raise TypeError("The character has to be a string")
         if not len(character) == 1:
             raise ValueError("The character string has to be length one")
+
+    @staticmethod
+    def _check_byte(byte):
+        """
+        This is a utility function for checking if a passed byte parameter value actually is of the bytes type and has
+        the required length one.
+        Args:
+            byte: The value to check
+
+        Returns:
+        void
+        """
+        if not isinstance(byte, bytes):
+            raise TypeError("The byte param has to be a bytes string object")
+        if not len(byte) == 1:
+            raise ValueError("the byte param object has to be a byte string of the length one")
 
 
 # THE FORM TRANSMISSION PROTOCOL
