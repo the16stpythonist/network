@@ -452,10 +452,48 @@ class Connection:
 
 
 class SocketConnection(Connection):
-
+    """
+    This is a subclass of the Connection object and therefore a direct implementation of its abstract methods. This
+    class uses the network communication via socket objects to ensure the receive/send functionlity guaranteed for
+    a Connection object.
+    """
     def __init__(self, sock):
         Connection.__init__(self)
         self.sock = sock
+
+    def sendall_bytes(self, bytes_string):
+        """
+        This method is used to send a bytes string over the connection
+        Args:
+            bytes_string: The bytes string to send
+
+        Returns:
+        void
+        """
+        self.sock.sendall(bytes_string)
+
+    def sendall_string(self, string):
+        """
+        This method is used to send a string over the connection
+        Args:
+            string: The string to be sent
+
+        Returns:
+        void
+        """
+        self.sendall_bytes(string.encode())
+
+    def receive_line(self, timeout):
+        """
+        This method will receive one line from the connection, which means, the string until a new line character
+        occurred.
+        Args:
+            timeout: The max amount of time for the reception
+
+        Returns:
+        The received string
+        """
+        return self.receive_string_until_character("\n", timeout)
 
     def receive_length_string(self, length, timeout):
         """
@@ -636,6 +674,7 @@ class SocketConnection(Connection):
         return b''.join(data)
 
 # THE FORM TRANSMISSION PROTOCOL
+
 
 class AppendixEncoder:
     """
