@@ -2103,6 +2103,15 @@ class CommandingBase(threading.Thread):
         command_context_type_string = str(self.command_context_class)
         self.connection.sendall_string(command_context_type_string)
 
+    def validate(self):
+        """
+        This function shall be used by the handler as well as the client as the method with which they compare the type
+        of command context on which they are based, to validate if a successful communication is possible
+        Returns:
+        void
+        """
+        raise NotImplementedError()
+
     @property
     def command_context_class(self):
         """
@@ -2227,3 +2236,20 @@ class CommandingHandler(CommandingBase):
         The class object
         """
         return self.command_context.__class__
+
+
+class CommandingClient(CommandingBase):
+
+    def __init__(self, connection, command_context_class, separation="$separation$"):
+        CommandingBase.__init__(connection, separation)
+
+        self.command_context_cls = command_context_class
+
+    @property
+    def command_context_class(self):
+        """
+        This method will return the class of the command context on which the client is based on
+        Returns:
+        The class object of the command context being used
+        """
+        return self.command_context_cls
