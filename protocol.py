@@ -2141,7 +2141,6 @@ class CommandingBase(threading.Thread):
             raise ValueError("The received form '{}' is not a commanding form")
 
 
-
 class CommandingHandler(CommandingBase):
 
     def __init__(self, connection, command_context):
@@ -2155,23 +2154,30 @@ class CommandingHandler(CommandingBase):
 
     def run(self):
 
-        while True:
+        while self.running:
             try:
-
+                # Checking if the connection client is compatible
                 self.validate()
-                while True:
+                while self.running:
+                    # Waiting for a request to be received over the connection
                     self.wait_request()
+                    # Receiving the form
                     receiver = FormReceiverThread(self.connection, self.separation)
                     receiver.start()
                     form = receiver.receive_form()
+                    # Creating the commanding form wrapper from the plain form
                     commanding_form = self.evaluate_commanding_form(form)
+                    # Executing the commanding form
                     try:
                         return_value = self.execute_form(commanding_form)
                         response = ReturnForm(return_value)
                     except Exception as exception:
                         response = ErrorForm(exception)
-                    # Sending the response form
-                    pass
+                    # Sending a request for being able to send the reply from
+                    self.send_request()
+                    # Sending the response form over a form transmitter Thread
+                    transmitter = FormTransmitterThread(self.connection, response.form, self.separation)
+                    transmitter.start()
 
             except ConnectionAbortedError as connection_aborted:
                 # This is the case if the type of command contexts does not match between server and client
@@ -2184,10 +2190,10 @@ class CommandingHandler(CommandingBase):
         """
         This method will execute the form with the command context object on which it is based on
         Args:
-            form: The received Form object
+            commanding_form: The received Form object
 
         Returns:
-
+        The return value of the command execution
         """
         return self.command_context.execute_form(commanding_form)
 
