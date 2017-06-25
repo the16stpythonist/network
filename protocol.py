@@ -2095,6 +2095,32 @@ class CommandingBase(threading.Thread):
         """
         raise NotImplementedError()
 
+    @staticmethod
+    def evaluate_commanding_form(form):
+        """
+        This is a utility function, which evaluates a form object, as it was received by the form transmission
+        protocol and returns the commanding form wrapper object according to what the original form is meant to
+        resemble.
+        Raises:
+            TypeError: In case the passed value is not Form object
+            ValueError: In case the type of the form is none of the commanding forms command, return or error
+        Args:
+            form: The form to be wrapped in a commanding form
+
+        Returns:
+        The commanding form, the given form is meant to resemble
+        """
+        if not isinstance(form, Form):
+            raise TypeError("Only Form objects can be evaluated to CommandingForm objects")
+        if form.title == "COMMAND":
+            return CommandForm(form)
+        elif form.title == "RETURN":
+            return ReturnForm(form)
+        elif form.title == "ERROR":
+            return ErrorForm(form)
+        else:
+            raise ValueError("The received form '{}' is not a commanding form")
+
 
 
 class CommandingHandler(CommandingBase):
