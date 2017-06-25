@@ -2034,18 +2034,10 @@ class ErrorForm(CommandingForm):
         return ''.join([exception_name, "('", exception_message, "')"])
 
 
-class CommandingSocketBase(threading.Thread):
+class CommandingBase(threading.Thread):
 
-    def __init__(self, ip, port, socket_family, socket_type):
-        # Initializing the super class
-        threading.Thread.__init__(self)
-        self.address = (ip, port)
-
-        self.socket_family = socket_family
-        self.socket_type = socket_type
-
-        # This will be the socket used for the connection
-        self.sock = None
+    def __init__(self, connection):
+        self.connection = connection
 
     def send_command_context_type(self):
         """
@@ -2056,166 +2048,6 @@ class CommandingSocketBase(threading.Thread):
         """
         command_context_type_string = str(self.command_context_class)
         self.sock.sendall(command_context_type_string)
-
-    def receive_line(self):
-        """
-        This method will receive the string from the socket connection until a new line character was read
-        Returns:
-        The received string
-        """
-        return self.receive_str_until_char("\n")
-
-    def create_socket(self):
-        """
-        This method creates a new socket object by using the specification of the socket family and the socket type
-        given by the init of the object
-        Returns:
-        A new socket object
-        """
-        sock = socket.socket(self.socket_family, self.socket_type)
-        return sock
-
-    def receive_str_until_char(self, character, timeout=10):
-        """
-        This method will receive a string until a certain character is read in the socket stream
-        Args:
-            character: The string character, after which to terminate the receiving
-            timeout: The int amount of time max. for receiving one character from the socket connection
-
-        Returns:
-        The received string up to the point of the break character
-        """
-        self._check_character(character)
-        bytes_string = self._receive_bytes_until_char(character, timeout)
-        string = bytes_string.decode()
-        return string
-
-    def _receive_bytes_until_char(self, character, timeout=10):
-        """
-        This method will receive a bytes string until a certain character is read in the socket stream
-        Args:
-            character: The string character, after which to terminate the receiving
-            timeout: The int amount of max. time for one character receive from socket
-
-        Returns:
-        The bytes string received up until the break character specified was read
-        """
-        # Turning the string object into a bytes string
-        byte_character = character.encode()
-        return self._receive_bytes_until_byte(byte_character, timeout)
-
-    def _receive_bytes_until_byte(self, byte_character, timeout=10):
-        """
-        This method will receive a byte string from the connection socket until a certain break character occurs.
-        Creates a SocketWrapper object and puts the socket into it.
-        Args:
-            timeout: The max time per character to receive in seconds
-
-        Returns:
-        The received byte string
-        """
-        self._ensure_connected()
-        sock_wrap = SocketWrapper(self.sock, True)
-        received = sock_wrap.receive_until_character(byte_character, 100, timeout, False)
-        sock_wrap.release_socket()
-        return received
-
-    def _ensure_connected(self):
-        """
-        This method will raise an error in case the server is not connected, thus ensuring for everything after the
-        call, that the server is connected.
-        Raises:
-            ConnectionError: In case the server is not connected
-        Returns:
-        void
-        """
-        if not self.connected:
-            raise ConnectionError("The CommandingServer is not connected")
-
-    def _check_address(self):
-        """
-        This method checks whether the values passed as the ip and the port on which the serve is supposed to operate
-        on are actually string and int as they have to be, to be passed to the socket.
-        Returns:
-        void
-        """
-        # Checking the ip if it is a string
-        self._check_ip()
-        # Checking the port if it is a int
-        self._check_port()
-
-    def _check_port(self):
-        """
-        This method checks, if the value passed as port of the server to operate on and then set as attribute of the
-        object has the correct data type, which is supposed to be integer
-        Raises:
-            TypeError: In case the data type of the port attr is not int
-        Returns:
-        void
-        """
-        if not isinstance(self.port, int):
-            raise TypeError("the port of the CommandingServer has to be a int")
-
-    def _check_ip(self):
-        """
-        This method checks if the type of the specified ip is correctly given as string
-        Raises:
-            TypeError: In case the type of the ip property is not string
-        Returns:
-        void
-        """
-        if not isinstance(self.ip, str):
-            raise TypeError("The ip address has to be specified as a string")
-
-    @staticmethod
-    def _check_character(character):
-        """
-        This method checks if the passed object is type string and if it has length one
-        Raises:
-            TypeError: in case the passed object is not a string
-            ValueError: In case the passed string is not length one
-        Args:
-            character: The object to check
-
-        Returns:
-        void
-        """
-        # Checking for correct param
-        if not (isinstance(character, str)):
-            raise TypeError("The character for receive until has to be string")
-        if not len(character) == 1:
-            ValueError("The string for receive character has to have exactly length one")
-
-    @property
-    def ip(self):
-        """
-        This is the getter method for the ip address of the socket connection, actually being stored as part of the
-        address tuple
-        Returns:
-        The string ip address
-        """
-        return self.address[0]
-
-    @property
-    def port(self):
-        """
-        This is the getter method for the port of the socket connection, actually being stored as part of the address
-        tuple
-        Returns:
-        The int port
-        """
-        return self.address[1]
-
-    @property
-    def connected(self):
-        """
-        This is the getter method of the state variable of the server being connected to a client or not. This is bieng
-        calculated by checking if the servers connection socket is None or not, as the attribute is being reset to None
-        whenever the connection is being terminated.
-        Returns:
-        The boolean value of the server being connected or not
-        """
-        return self.sock is not None
 
     @property
     def command_context_class(self):
@@ -2229,20 +2061,13 @@ class CommandingSocketBase(threading.Thread):
         raise NotImplementedError()
 
 
-class CommandingServer(CommandingSocketBase):
+class CommandingHandler(CommandingBase):
 
-    def __init__(self, ip, port, command_context, socket_family=socket.AF_INET, socket_type=socket.SOCK_STREAM):
+    def __init__(self, connection, command_context):
         # Initializing the super class
-        CommandingSocketBase.__init__(ip, port, socket_family, socket_type)
-        self.address = (ip, port)
-        # Creating a container to later store the address of the connected client and the socket
-        self.connection_address = None
+        CommandingBase.__init__(connection)
 
         self.command_context = command_context
-        self.socket_family = socket_family
-        self.socket_type = socket_type
-        # Creating a new socket, that will be used to set up a server
-        self.server_socket = self.create_socket()
 
         # Setting the running state variable to True
         self.running = True
@@ -2251,21 +2076,10 @@ class CommandingServer(CommandingSocketBase):
 
         while True:
             try:
-                # Creating a new socket object for the server
-                self.server_socket = self.create_socket()
-                # Binding the socket to the address given
-                self.bind_socket()
-                # Making the socket listen
-                self.server_socket.listen(3)
-                # Accepting the first incoming connection
-                self.sock, self.connection_address = self.server_socket.accept()
 
                 self.validate()
                 while True:
                     pass
-
-            except socket.error as socket_error:
-                pass
 
             except ConnectionAbortedError as connection_aborted:
                 # This is the case if the type of command contexts does not match between server and client
@@ -2273,9 +2087,6 @@ class CommandingServer(CommandingSocketBase):
 
             except ConnectionError as connection_error:
                 pass
-
-            finally:
-                self.sock = None
 
     def validate(self):
         """
@@ -2286,18 +2097,9 @@ class CommandingServer(CommandingSocketBase):
         # Sending the type of command context in which the server is based on to the client
         self.send_command_context_type()
         # Receiving the type of command context on which the client is based on from the client
-        client_command_context = self.receive_line()
+        client_command_context = self.connection.receive_line()
         if str(self.command_context_class) != client_command_context:
             raise ConnectionAbortedError("The client and server do not have the same command context")
-
-    def bind_socket(self):
-        """
-        This method will bind the socket, which is stored in the socket attribute of the object to the address, that
-        is specified by the address attrubute of the server
-        Returns:
-        void
-        """
-        self.server_socket.bind(self.address)
 
     def _check_command_context(self):
         """
