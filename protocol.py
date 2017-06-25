@@ -2116,6 +2116,21 @@ class CommandingBase(threading.Thread):
         """
         raise NotImplementedError()
 
+    def _send_form(self, form):
+        """
+        This method will send the specified form over the connection and will block the call until the transmission is
+        finished
+        Args:
+            form: The form object to be transmitted
+
+        Returns:
+        void
+        """
+        transmitter = FormTransmitterThread(self.connection, form, self.separation)
+        transmitter.start()
+        while not transmitter.finished:
+            time.sleep(0.001)
+
     @property
     def command_context_class(self):
         """
@@ -2189,8 +2204,7 @@ class CommandingHandler(CommandingBase):
                     # Sending a request for being able to send the reply from
                     self.send_request()
                     # Sending the response form over a form transmitter Thread
-                    transmitter = FormTransmitterThread(self.connection, response.form, self.separation)
-                    transmitter.start()
+                    self._send_form(response.form)
 
             except ConnectionAbortedError as connection_aborted:
                 # This is the case if the type of command contexts does not match between server and client
@@ -2349,7 +2363,4 @@ class CommandingClient(CommandingBase):
         void
         """
         command_form = CommandForm(command_name, pos_args, kw_args)
-        transmitter = FormTransmitterThread(self.connection, command_form.form, self.separation)
-        transmitter.start()
-        while not transmitter.finished:
-            pass
+        self._send_command(command_form.form)
