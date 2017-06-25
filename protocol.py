@@ -2040,11 +2040,30 @@ class CommandingBase(threading.Thread):
         self.connection = connection
         self.separation = separation
 
+    def send_request(self):
+        """
+        This method sends a 'request' string over the connection and then waits an indefinite amount of time until a
+        line string has been received. If the received string is the 'ack' string, the methods exists, in case not, an
+        exception is being raised.
+        Raises:
+            ValueError: In case the received string is not the ack string
+        Returns:
+        void
+        """
+        # Sending a request to the other side of the connection
+        self.connection.sendall_string("request")
+        # Waiting for the ack
+        line_string = self.wait_line()
+        if line_string != "ack":
+            raise ValueError("The ack was not replied")
+
     def wait_request(self):
         """
         This method waits an indefinite amount of time for a new line to be received over the connection, then checks
         if the received string is a 'request' string. In case it is, an 'ack' string will be sent back to the client,
         which signals, that the actual form can now be transmitted.
+        Raises:
+            ValueError: In case the received string was not the request string
         Returns:
         void
         """
@@ -2145,7 +2164,14 @@ class CommandingHandler(CommandingBase):
                     receiver = FormReceiverThread(self.connection, self.separation)
                     receiver.start()
                     form = receiver.receive_form()
-
+                    commanding_form = self.evaluate_commanding_form(form)
+                    try:
+                        return_value = self.execute_form(commanding_form)
+                        response = ReturnForm(return_value)
+                    except Exception as exception:
+                        response = ErrorForm(exception)
+                    # Sending the response form
+                    pass
 
             except ConnectionAbortedError as connection_aborted:
                 # This is the case if the type of command contexts does not match between server and client
@@ -2154,7 +2180,7 @@ class CommandingHandler(CommandingBase):
             except ConnectionError as connection_error:
                 pass
 
-    def execute_form(self, form):
+    def execute_form(self, commanding_form):
         """
         This method will execute the form with the command context object on which it is based on
         Args:
@@ -2163,7 +2189,7 @@ class CommandingHandler(CommandingBase):
         Returns:
 
         """
-        self.command_context.execute_form(form)
+        return self.command_context.execute_form(commanding_form)
 
     def validate(self):
         """
