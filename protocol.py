@@ -1,6 +1,7 @@
 import threading
 import socket
 import pickle
+import queue
 import time
 import json
 
@@ -1446,6 +1447,8 @@ class CommandContext:
             elif isinstance(form, ReturnForm):
                 # Simply returning the value stored in the form
                 return form.return_value
+            elif isinstance(form, ErrorForm):
+                raise form.exception
         else:
             raise TypeError("The form to execute is supposed to be a CommandingForm subclass")
 
@@ -2036,9 +2039,10 @@ class ErrorForm(CommandingForm):
 
 class CommandingBase(threading.Thread):
 
-    def __init__(self, connection, separation="$separation$"):
+    def __init__(self, connection, command_context, separation="$separation$"):
         self.connection = connection
         self.separation = separation
+        self.command_context = command_context
 
     def send_request(self):
         """
@@ -2121,7 +2125,7 @@ class CommandingBase(threading.Thread):
         Returns:
         The class object of the respective command contect, on which the object is based on
         """
-        raise NotImplementedError()
+        return self.command_context.__class__
 
     @staticmethod
     def evaluate_commanding_form(form):
@@ -2154,7 +2158,7 @@ class CommandingHandler(CommandingBase):
 
     def __init__(self, connection, command_context):
         # Initializing the super class
-        CommandingBase.__init__(connection)
+        CommandingBase.__init__(connection, command_context)
 
         self.command_context = command_context
 
@@ -2228,22 +2232,45 @@ class CommandingHandler(CommandingBase):
         if not isinstance(self.command_context, CommandContext):
             raise TypeError("The command context parameter of the Commanding server has to be CommandContext")
 
-    @property
-    def command_context_class(self):
-        """
-        This function returns the class object of the command context object, on which the server is based on
-        Returns:
-        The class object
-        """
-        return self.command_context.__class__
-
 
 class CommandingClient(CommandingBase):
 
-    def __init__(self, connection, command_context_class, separation="$separation$"):
-        CommandingBase.__init__(connection, separation)
+    def __init__(self, connection, command_context, separation="$separation$"):
+        CommandingBase.__init__(connection, command_context, separation)
 
-        self.command_context_cls = command_context_class
+        self.response_list = []
+        self.request_queue = queue.Queue()
+
+        self.running = True
+
+    def run(self):
+        try:
+            while self.running:
+                request = self.request_queue.get()
+                # Sending the request to the handler to get the auth to send a form/command
+                self.send_request()
+                # Sending the actual command form
+                self._send_command(request[0], request[1], request[2])
+                # Waiting for the request from the handler, that asks if it can send back the return form
+                self.wait_request()
+                # Receiving the return form and putting it into the list
+                receiver = FormReceiverThread(self.connection, self.separation)
+                receiver.start()
+                response = receiver.receive_form()
+                self.response_list.append((request, response))
+        except:
+            pass
+
+    def execute_command(self, command_name, pos_args, kw_args, blocking=True):
+        request = (command_name, pos_args, kw_args)
+        self.request_queue.put(request)
+        if blocking:
+            while not self.has_response(request):
+                time.sleep(0.01)
+            # Getting the Commanding form, that was sent as a response for the command from the buffer and then
+            # executing it via the command context object
+            response = self.get_response(request)
+            return self.command_context.execute.form(response)
 
     def validate(self):
         """
@@ -2261,11 +2288,17 @@ class CommandingClient(CommandingBase):
         if not line_string == str(self.command_context_class):
             raise ConnectionAbortedError("The client and server do not have the same command context")
 
-    @property
-    def command_context_class(self):
-        """
-        This method will return the class of the command context on which the client is based on
-        Returns:
-        The class object of the command context being used
-        """
-        return self.command_context_cls
+    def get_response(self, request):
+        for response in self.response_list:
+            if response[0] == request:
+                return response[1]
+
+    def has_response(self, request):
+        return request in map(lambda x: x[0], self.response_list)
+
+    def _send_command(self, command_name, pos_args, kw_args):
+        command_form = CommandForm(command_name, pos_args, kw_args)
+        transmitter = FormTransmitterThread(self.connection, command_form.form, self.separation)
+        transmitter.start()
+        while not transmitter.finished:
+            pass
