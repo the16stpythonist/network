@@ -621,7 +621,7 @@ class SocketConnection(Connection):
             # Checking for overall timeout
             time_delta = time.time() - start_time
             if time_delta > timeout:
-                raise TimeoutError("{} Bytes could not be received in {} seconds".format(length, timeout))
+                raise TimeoutError("Bytes could not be received in {} seconds".format(timeout))
 
             data.append(received)
         # Removing the break character from the data list
@@ -1048,14 +1048,13 @@ class FormTransmitterThread(threading.Thread):
     at the front of the line. In case the adjust is False, the body will be searched for the separation string and
     an exception risen in case one was found
     """
-    def __init__(self, sock, form, separation, timeout=10, adjust=True):
+    def __init__(self, connection, form, separation, timeout=10, adjust=True):
         threading.Thread.__init__(self)
         # The form object to be transmitted over the socket connection
         self.form = form
         self.check_form()
         # The socket and the wrapped socket
-        self.sock = sock
-        self.sock_wrap = SocketWrapper(self.sock, True)
+        self.connection = connection
         # A string to be separating the body from the appendix
         self.separation = separation
         self.check_separation()
@@ -1093,15 +1092,15 @@ class FormTransmitterThread(threading.Thread):
         # Sending the individual lines of the body of the form over the socket
         body_string_lines = self.form.body.split("\n")
         for line in body_string_lines:
-            self.sock_wrap.sendall(line+"\n")
+            self.connection.sendall_string(line+"\n")
             self.wait_ack()
         # Sending the separation at last
         separator = self.assemble_separator()
-        self.sock_wrap.sendall(separator+"\n")
+        self.connection.sendall_string(separator+"\n")
 
     def send_title(self):
         title = self.form.title + "\n"
-        self.sock_wrap.sendall(title)
+        self.connection.sendall_string(title)
 
     def send_appendix(self):
         """
@@ -1110,7 +1109,7 @@ class FormTransmitterThread(threading.Thread):
         void
         """
         appendix_encoded = self.form.appendix_encoded
-        self.sock_wrap.sendall(appendix_encoded)
+        self.connection.sendall_bytes(appendix_encoded)
 
     def wait_ack(self):
         """
@@ -1120,17 +1119,9 @@ class FormTransmitterThread(threading.Thread):
         Returns:
         void
         """
-        response = []
-        start_time = time.time()
-        time_delta = 0
-        while response != [b"a", b"c", b"k"]:
-            if time_delta >= self.timeout:
-                raise TimeoutError("Timeout exceeded, while waiting for ack")
-            # Adding a character at the time to the response list
-            response_character = self.sock_wrap.receive_length(1)
-            response.append(response_character)
-            # Calculating the time delta
-            time_delta = time.time() - start_time
+        response = self.connection.receive_length_bytes(3)
+        if not response == b'ack':
+            raise ValueError("Incorrect ACK sent")
 
     def check_form(self):
         """
@@ -1216,11 +1207,10 @@ class FormTransmitterThread(threading.Thread):
 
 class FormReceiverThread(threading.Thread):
 
-    def __init__(self, sock, separation, timeout=10):
+    def __init__(self, connection, separation, timeout=10):
         threading.Thread.__init__(self)
         # The socket and the wrapped socket
-        self.sock = sock
-        self.sock_wrap = SocketWrapper(self.sock, True)
+        self.connection = connection
         # A string to be separating the body from the appendix
         self.separation = separation
 
@@ -1305,7 +1295,7 @@ class FormReceiverThread(threading.Thread):
         void
         """
         # Receiving as many bytes as the length was dictated by the separation string
-        appendix_bytes = self.sock_wrap.receive_length(self.appendix_length, timeout=self.timeout)
+        appendix_bytes = self.connection.receive_length_bytes(self.appendix_length, timeout=self.timeout)
         appendix_string = appendix_bytes
         self.appendix = appendix_string
 
@@ -1316,21 +1306,7 @@ class FormReceiverThread(threading.Thread):
         Returns:
         The string line, received from the socket
         """
-        line_bytes = self.receive_line_bytes()
-        # Turning the bytes string back into a string, assuming the standard encoding
-        line_string = line_bytes.decode()
-        return line_string
-
-    def receive_line_bytes(self):
-        """
-        This method will receive a line from the socket, it manages, by using the receive until character method from
-        the socket wrapper object. The timeout of that method is set to be the timeout specified in the attribute of
-        this object, although it has to be noted, that this timeout is used for the reception of every character
-        Returns:
-        The byte string of the line, that was received
-        """
-        line_bytes = self.sock_wrap.receive_until_character(b'\n', 1024, timeout=self.timeout)
-        return line_bytes
+        return self.connection.receive_line(self.timeout)
 
     def process_separation(self, line):
         """
@@ -1425,7 +1401,7 @@ class FormReceiverThread(threading.Thread):
         Returns:
         void
         """
-        self.sock_wrap.sendall("ack")
+        self.connection.sendall_bytes(b"ack")
 
 
 # THE COMMANDING PROTOCOL
