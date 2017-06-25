@@ -2215,8 +2215,8 @@ class CommandingHandler(CommandingBase):
         # Sending the type of command context in which the server is based on to the client
         self.send_command_context_type()
         # Receiving the type of command context on which the client is based on from the client
-        client_command_context = self.connection.receive_line()
-        if str(self.command_context_class) != client_command_context:
+        line_string = self.connection.receive_line()
+        if str(self.command_context_class) != line_string:
             raise ConnectionAbortedError("The client and server do not have the same command context")
 
     def _check_command_context(self):
@@ -2244,6 +2244,22 @@ class CommandingClient(CommandingBase):
         CommandingBase.__init__(connection, separation)
 
         self.command_context_cls = command_context_class
+
+    def validate(self):
+        """
+        This method checks if the handler and the client have the same command context to work with. If that is not
+        the case an error will be raised, because the handler and client are incompatible.
+        Raises:
+            ConnectionAbortedError: In case the handler and the client are based on different command contexts
+        Returns:
+        void
+        """
+        # Receiving the command context type string from the handler
+        line_string = self.connection.receive_line()
+        # Sending the own command context type over the connection
+        self.send_command_context_type()
+        if not line_string == str(self.command_context_class):
+            raise ConnectionAbortedError("The client and server do not have the same command context")
 
     @property
     def command_context_class(self):
