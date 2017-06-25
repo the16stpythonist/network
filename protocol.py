@@ -2262,6 +2262,21 @@ class CommandingClient(CommandingBase):
             pass
 
     def execute_command(self, command_name, pos_args, kw_args, blocking=True):
+        """
+        This method will send the command as a form over the connection and therefore issue the command on the remote
+        Handler. Depending on whether the method is executed as blocking or not, the method will either exit as void
+        after the command has been issued or wait for the response to be received and then execute the action specified
+        in the response form, thus either raising an error or returning the return value of the command
+        Args:
+            command_name: The string name of the command to execute
+            pos_args: The pos args list
+            kw_args: The kw args dict
+            blocking: The boolean value of whether the method should wait for the response to be returned and then
+                execute the the response or exit straight after issuing the command
+
+        Returns:
+        -
+        """
         request = (command_name, pos_args, kw_args)
         self.request_queue.put(request)
         if blocking:
@@ -2289,14 +2304,50 @@ class CommandingClient(CommandingBase):
             raise ConnectionAbortedError("The client and server do not have the same command context")
 
     def get_response(self, request):
+        """
+        If given a request tuple, which consists of the three elements in order: The command name, the commands
+        positional arguments as a list and the commands keyword arguments as a dict, this method will search the
+        response list and return the response object, that has been received as an answer to that request. In case
+        there is no response to the request yet, an error will be raised.
+        Raises:
+            KeyError: In case there is no response to the given request yet
+        Args:
+            request: The request tuple, for which to return the resulting response
+
+        Returns:
+        The response is a CommandingForm, usually of the type ReturnForm or ErrorForm
+        """
         for response in self.response_list:
             if response[0] == request:
                 return response[1]
+        raise KeyError("There is no response to the given request yet")
 
     def has_response(self, request):
+        """
+        If given a request tuple, which consists of the three elements in order: The command name, the commands
+        positional arguments as a list and the commands keyword arguments as a dict, this method will return the
+        boolean value if a response to that request has already been received and saved into the internal list
+        Args:
+            request: The request tuple, for which to return the resulting response
+
+        Returns:
+        The boolean value of whether or not a response has been received already
+        """
         return request in map(lambda x: x[0], self.response_list)
 
     def _send_command(self, command_name, pos_args, kw_args):
+        """
+        This method will actually create a CommandForm with the given specification of the command name, positional
+        and keyword agruments and then send this form over the connection, using a FormTransmitterThread. The method
+        will exit, when the form has been transmitted completely
+        Args:
+            command_name: The string name of the command to execute
+            pos_args: The pos args list
+            kw_args: The kw args dict
+
+        Returns:
+        void
+        """
         command_form = CommandForm(command_name, pos_args, kw_args)
         transmitter = FormTransmitterThread(self.connection, command_form.form, self.separation)
         transmitter.start()
