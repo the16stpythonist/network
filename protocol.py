@@ -2036,8 +2036,43 @@ class ErrorForm(CommandingForm):
 
 class CommandingBase(threading.Thread):
 
-    def __init__(self, connection):
+    def __init__(self, connection, separation="$separation$"):
         self.connection = connection
+        self.separation = separation
+
+    def wait_request(self):
+        """
+        This method waits an indefinite amount of time for a new line to be received over the connection, then checks
+        if the received string is a 'request' string. In case it is, an 'ack' string will be sent back to the client,
+        which signals, that the actual form can now be transmitted.
+        Returns:
+        void
+        """
+        # Waiting for a line to be received by the connection
+        line_string = self.wait_line()
+        if line_string != "request":
+            raise ValueError("The client has sent wrong request identifier")
+        # Sending the ack in response
+        self.send_ack()
+
+    def send_ack(self):
+        """
+        This method will send the string 'ack' over the connection object followed by a new line character. An ack is
+        being sent as the response to a request by the client of the connection and thus also signals the client to
+        begin sending the actual form.
+        Returns:
+        void
+        """
+        self.connection.sendall_string("ack\n")
+
+    def wait_line(self):
+        """
+        This method will wait an indefinite amount of time until a string is being sent over a the connection and will
+        then eventually return the substring until a new line character has occurred in the stream
+        Returns:
+        The received string
+        """
+        return self.connection.wait_string_until_character("\n")
 
     def send_command_context_type(self):
         """
@@ -2047,7 +2082,7 @@ class CommandingBase(threading.Thread):
 
         """
         command_context_type_string = str(self.command_context_class)
-        self.sock.sendall(command_context_type_string)
+        self.connection.sendall_string(command_context_type_string)
 
     @property
     def command_context_class(self):
@@ -2059,6 +2094,7 @@ class CommandingBase(threading.Thread):
         The class object of the respective command contect, on which the object is based on
         """
         raise NotImplementedError()
+
 
 
 class CommandingHandler(CommandingBase):
@@ -2079,7 +2115,11 @@ class CommandingHandler(CommandingBase):
 
                 self.validate()
                 while True:
-                    pass
+                    self.wait_request()
+                    receiver = FormReceiverThread(self.connection, self.separation)
+                    receiver.start()
+                    form = receiver.receive_form()
+
 
             except ConnectionAbortedError as connection_aborted:
                 # This is the case if the type of command contexts does not match between server and client
@@ -2087,6 +2127,17 @@ class CommandingHandler(CommandingBase):
 
             except ConnectionError as connection_error:
                 pass
+
+    def execute_form(self, form):
+        """
+        This method will execute the form with the command context object on which it is based on
+        Args:
+            form: The received Form object
+
+        Returns:
+
+        """
+        self.command_context.execute_form(form)
 
     def validate(self):
         """
