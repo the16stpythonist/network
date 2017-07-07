@@ -120,8 +120,14 @@ class JsonAppendixEncoder(AppendixEncoder):
 
 class PickleAppendixEncoder(AppendixEncoder):
     """
-    This class provides the static methods to encode a appendix object using the pickle mechanism, which enables the
-    use of more complex and custom objects.
+    STATIC CLASS
+    This is a subclass of the appendix encoder interface, therefore this class specifies the static methods 'encode',
+    'decode' and 'is_serializable' to be used to encode the appendix data structures for Form objects.
+    This class implements encoding by using the pickle module of python, thus it is able to encode and decode very
+    complex data structures, which include all Python built in types and even custom class objects, but that also
+    means that the encoding iss limited to a communication between two members operating python.
+
+    Because the class is using pickle, the encoded data is non readable and on default of the bytes data type
     """
     @staticmethod
     def encode(obj):
