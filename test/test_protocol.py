@@ -1,4 +1,4 @@
-import network.protocol as protocol
+import network.commanding as protocol
 import unittest
 import socket
 import random
