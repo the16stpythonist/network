@@ -72,7 +72,22 @@ class Poller:
 
 
 class GenericPoller(Poller):
-
+    """
+    This is a specific implementation of the abstract Poller class. In general objects of this class will perform the
+    basic polling mechanism if passed a generator function without parameters, which returns a numeric value in the
+    series of interval values, the connection object on which to perform the polling, and the function with the single
+    parameter being the connection object, which specifies the actual process of the polling itself.
+    Attributes:
+        interval_generator: The generator function without parameters, which forms the series of interval
+            specifications for the polling process
+        keep_interval: The boolean flag of whether or not the current interval value is supposed to be kept or if the
+            value is supposed to be replaced with the next value from the interval generator function
+        connection: The Connection object on which the polling is supposed to be performed
+        _poll_instruction: The function which actually implements the whole polling process, by using the connection
+            object as the parameter. This function then raises a TimeoutError in case the poll was unsuccessful, which
+            is then being risen from within the 'poll' call of the Poller object
+        _interval: The actual numeric interval value, which holds the current interval to check for
+    """
     def __init__(self, connection, interval_generator, polling_function):
         self.interval_generator = interval_generator
         interval = self._next_interval()
