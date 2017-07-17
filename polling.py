@@ -74,7 +74,34 @@ class GenericPoller(Poller):
 
     def __init__(self, connection, interval_generator, polling_function):
         self.interval_generator = interval_generator
-        Poller.__init__(self, connection, None, polling_function)
+        interval = self._next_interval()
+        self.keep_interval = True
+        Poller.__init__(self, connection, interval, polling_function)
+
+    @property
+    def interval(self):
+        """
+        This is the getter method of the interval. The interval is a numeric value, that states the amount of seconds
+        supposed to be between the individual poll calls.
+        The function checks if the keep_interval flag is still set and returns the ild value in case it is, but
+        updates the internal attribute with the new value of the generator function in case it is not.
+        Notes:
+            Since this is the generic Implementation of a poller there are a lot of possibilities by defining a
+            generator for the series of new interval values, which means, that the interval values will most likely
+            not be the same.
+
+        Returns:
+        The int/float value of the interval
+        """
+        if self.keep_interval:
+            return self._interval
+        else:
+            # Updating the interval and then returning the new value
+            self._update_interval()
+            # Setting the flag to keep the new interval until it is exceeded the next time
+            self.keep_interval = True
+            return self._interval
+
 
     @property
     def poll_instruction(self):
@@ -94,8 +121,45 @@ class GenericPoller(Poller):
         Notes:
             The 'polling_instruction' property is enforced by the interface, but does not really specify what the
             instruction is by a clear property name, therefore this property should be used when using the
-            GenericPoller conciously and the other when handling Poller's generically.
+            GenericPoller consciously and the other when handling Poller's generically.
         Returns:
         The one parameter function passed as the polling instruction
         """
         return self.poll_instruction
+
+    def _update_interval(self):
+        """
+        This function will update the private interval attribute of the object, by getting the next interval value from
+        the generator function and then assigning that new value to the interval attribute.
+        Will return the current value of the interval attribute, which means the value before the update
+        Returns:
+        The current value of the interval
+        """
+        current_value = self._interval
+        next_interval = self._next_interval()
+        self._assign_interval(next_interval)
+        return current_value
+
+    def _next_interval(self):
+        """
+        This function will simply call the interval generator of the Poller and therefore get the next interval, that
+        is supposed to be used as the specified interval after which the poller should be sending a poll.
+        Returns:
+        The float/int value for the interval
+        """
+        return self.interval_generator()
+
+    def _assign_interval(self, interval):
+        """
+        This function will assign the passed float/int value to the interval.
+        Notes:
+            This function does not type check, as it is supposed to be the correct type because the private function
+            is only being handled by class internal implementation
+        Args:
+            interval: The int/float amount for the new value of the interval attribute
+
+        Returns:
+        void
+        """
+        # Assigning the new value to the interval attribute of the object
+        self._interval = interval
