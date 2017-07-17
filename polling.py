@@ -1,3 +1,21 @@
+"""
+The Poller classes:
+The Poller classes are supposed to implement the behaviour of polling a connection for its availability. The problem
+could be the following: A program has to know if a connection is still available at (almost) all the time and not
+only once an important message is being sent be the service operating in that connection only to realize far too late,
+that there is no reply.
+This kind of polling service can be build in two main ways:
+- As plain objects: Where the idle time or the interval in which no poll has been performed is being maintained by the
+  service that is also maintining the poller object itself. In such a situation the Poller objects do not offer a great
+  advantage as they are simply a way of managing the various functions that are used for the polling, but the actual
+  poll tracking sill has to be implemented higher level.
+- As Threads: obviously a more elegant approach is to run the Poller parallel and just let it do its thing in the
+  background, while the service itself is not using the connection.
+  With this approach though there is the need for a more advanced implementation for the Connection interface, which
+  also features the possibility to put a threading Lock on the connection. And also if there is a big number of
+  connections to contain a polling service it would be problematic for the performance to maintain a big number of
+  mostly idle Threads, that just count the time till the next poll...
+"""
 import time
 
 
