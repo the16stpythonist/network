@@ -79,6 +79,15 @@ class GenericPoller(Poller):
         self.keep_interval = True
         Poller.__init__(self, connection, interval, polling_function)
 
+    def poll(self):
+        """
+        This method will call the function, that was specified as the poll instruction with the connection object as
+        the parameter.
+        Returns:
+        void
+        """
+        self.poll_function(self.connection)
+
     def is_interval_match(self, interval, update=False):
         """
         This function checks if the interval passed as parameter is already bigger than the interval specified by the
