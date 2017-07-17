@@ -668,3 +668,4 @@ class SocketConnection(Connection):
         data.pop(-1)
         # Returning the assembled bytes string
         return b''.join(data)
+

@@ -1,11 +1,7 @@
-import network.commanding as protocol
-import unittest
 import socket
-import random
-import threading
-import json
-import time
+import unittest
 
+import protocol.commanding as protocol
 
 
 class TestForm(unittest.TestCase):
