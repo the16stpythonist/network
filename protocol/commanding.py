@@ -92,6 +92,18 @@ class CommandContext:
         command_method_name = ''.join(string_list)
         return command_method_name
 
+    def command_time(self, pos_args, kw_args):
+        """
+        Some sort of dummy command, which just returns the time
+        Args:
+            pos_args:
+            kw_args:
+
+        Returns:
+        The int timestamp of the current time
+        """
+        return time.time()
+
 
 class CommandingForm:
     """
@@ -854,28 +866,39 @@ class CommandingClient(CommandingBase):
         CommandingBase.__init__(connection, command_context, separation)
 
         self.last_activity_timestamp = None
+        self.idle_time = 0
         self._polling_interval = polling_interval
+        interval_generator = self.build_interval_generator()
+        self.poller = GenericPoller(self.connection, interval_generator, None)
 
         self.response_list = []
-        self.request_queue = queue.Queue()
-
+        self.request_queue = queue.PriorityQueue(10)
         self.running = True
 
     def run(self):
         try:
             while self.running:
-                request = self.request_queue.get()
-                # Sending the request to the handler to get the auth to send a form/command
-                self.send_request()
-                # Sending the actual command form
-                self._send_command(request[0], request[1], request[2])
-                # Waiting for the request from the handler, that asks if it can send back the return form
-                self.wait_request()
-                # Receiving the return form and putting it into the list
-                receiver = FormReceiverThread(self.connection, self.separation)
-                receiver.start()
-                response = receiver.receive_form()
-                self.response_list.append((request, response))
+                # Check the Que not to be empty
+                if self.request_queue.empty():
+                    # Checking if the idle time has already been exceeded
+                    pass
+                else:
+                    request = self.request_queue.get()
+                    # Sending the request to the handler to get the auth to send a form/command
+                    self.send_request()
+                    # Sending the actual command form
+                    self._send_command(request[0], request[1], request[2])
+                    # Waiting for the request from the handler, that asks if it can send back the return form
+                    self.wait_request()
+                    # Receiving the return form and putting it into the list
+                    receiver = FormReceiverThread(self.connection, self.separation)
+                    receiver.start()
+                    response = receiver.receive_form()
+                    self.response_list.append((request, response))
+
+                    # Updating the last activity
+                    self.update_last_activity_time()
+
         except:
             pass
 
@@ -980,6 +1003,40 @@ class CommandingClient(CommandingBase):
             yield polling_interval
 
         return gen
+
+    def update_last_activity_time(self):
+        """
+        This method simply assignes the current timestamp of the time module to the attribute that monitors the
+        last activity. Also resets the idle time counter
+        Returns:
+        void
+        """
+        self.last_activity_timestamp = time.time()
+        self.idle_time = 0
+
+    @staticmethod
+    def _polling_function(connection, separation, timeout):
+        """
+        This method provides the basic function object for the polling function for the GenericPoller to perform the
+        polling operation. The function sends a CommandForm to the remote participant calling the time dummy function
+        to fetch the local time and send it back as a response.
+        Altough this function has 3 parameters, where as the polling function is expected to implement the connection
+        parameter as the only one. This means this method has to be wrapped by a lambda function to preset the
+        attributes of the calling CommandClient as fix parameters.
+        Args:
+            connection: The connection object to perform the poll on
+            separation: The separation used by the CommandingClient
+            timeout: The timout specified by the CommandingClient
+
+        Returns:
+        void
+        """
+        form = CommandForm("time")
+        transmitter = FormTransmitterThread(connection, form, separation=separation, timeout=timeout)
+        transmitter.start()
+        receiver = FormReceiverThread(connection, separation=separation, timeout=timeout)
+        receiver.start()
+        receiver.receive_form()
 
     def _send_command(self, command_name, pos_args, kw_args):
         """
