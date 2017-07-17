@@ -18,7 +18,7 @@ class Poller:
         self.connection = connection
         self._poll_instruction = poll_instruction
 
-    def is_interval_match(self, interval):
+    def is_interval_match(self, interval, update=False):
         """
         This function is supposed to take a float interval value in seconds as a parameter internally check if the
         interval time has been exceeded or not. The function is supposed to return a tuple with the boolean value of
@@ -27,6 +27,7 @@ class Poller:
         time value passed to the function
         Args:
             interval: The int value for the interval in seconds
+            update: Whether or not the interval is supposed to be updated after it was checked
 
         Returns:
         A tuple (bool, int) where the boolean value states whether or not the interval value given is already bigger
@@ -78,6 +79,32 @@ class GenericPoller(Poller):
         self.keep_interval = True
         Poller.__init__(self, connection, interval, polling_function)
 
+    def is_interval_match(self, interval, update=False):
+        """
+        This function checks if the interval passed as parameter is already bigger than the interval specified by the
+        Poller object. This function will return a tuple of a boolean and an int value, where the boolean value states
+        whether the passed interval was indeed bigger then the value specified by the Poller, in which case that is
+        called an interval match, and the int value that tells how much the passed value has exceeded the one of the
+        poller. In case the passed value has not exceeded the Poller value, the integer value will be negative.
+        The update flag can be set to signal, that the interval value is supposed to be updated to the next value,
+        returned by the generator.
+        Args:
+            interval: The numeric value for the interval, which is supposed to be compared to the value of the Poller
+            update: The boolean flag to tell whether the interval value is supposed to be updated to the next
+                generator value after the call or not
+
+        Returns:
+        A tuple (bool, int/float), where bool is whether the interval is exceeded, and int is how much exceeded
+        """
+        difference = interval - self.interval
+        if difference < 0:
+            return False, difference
+        else:
+            # Updating the interval value in case by setting the flag
+            if update:
+                self.keep_interval = False
+            return True, difference
+
     @property
     def interval(self):
         """
@@ -101,7 +128,6 @@ class GenericPoller(Poller):
             # Setting the flag to keep the new interval until it is exceeded the next time
             self.keep_interval = True
             return self._interval
-
 
     @property
     def poll_instruction(self):
