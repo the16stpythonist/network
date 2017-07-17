@@ -59,7 +59,7 @@ class Poller:
         """
         raise NotImplementedError()
 
-    @@property
+    @property
     def poll_instruction(self):
         """
         This is the property getter function for the poll instruction attribute of the Poller.
@@ -70,3 +70,32 @@ class Poller:
         raise NotImplementedError()
 
 
+class GenericPoller(Poller):
+
+    def __init__(self, connection, interval_generator, polling_function):
+        self.interval_generator = interval_generator
+        Poller.__init__(self, connection, None, polling_function)
+
+    @property
+    def poll_instruction(self):
+        """
+        This function will simply return the value of the attribute 'polling_instruction', which is supposed to be
+        a function with a single parameter, that is the Connection of the poller, and a void return.
+        Returns:
+        The one parameter function passed as polling instruction
+        """
+        return self._poll_instruction
+
+    @property
+    def poll_function(self):
+        """
+        This function will simply return the value of the attribute if the 'polling_instruction', and is thus exactly
+        the same as the property method for the 'polling_instruction' itself.
+        Notes:
+            The 'polling_instruction' property is enforced by the interface, but does not really specify what the
+            instruction is by a clear property name, therefore this property should be used when using the
+            GenericPoller conciously and the other when handling Poller's generically.
+        Returns:
+        The one parameter function passed as the polling instruction
+        """
+        return self.poll_instruction
