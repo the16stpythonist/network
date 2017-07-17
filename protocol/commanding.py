@@ -2,6 +2,8 @@ from network.form import Form
 from network.form import FormTransmitterThread
 from network.form import FormReceiverThread
 
+from network.polling import GenericPoller
+
 import threading
 import queue
 import time
@@ -848,8 +850,11 @@ class CommandingHandler(CommandingBase):
 
 class CommandingClient(CommandingBase):
 
-    def __init__(self, connection, command_context, separation="$separation$"):
+    def __init__(self, connection, command_context, separation="$separation$", polling_interval=None):
         CommandingBase.__init__(connection, command_context, separation)
+
+        self.last_activity_timestamp = None
+        self._polling_interval = polling_interval
 
         self.response_list = []
         self.request_queue = queue.Queue()
@@ -947,6 +952,34 @@ class CommandingClient(CommandingBase):
         The boolean value of whether or not a response has been received already
         """
         return request in map(lambda x: x[0], self.response_list)
+
+    @property
+    def is_polling(self):
+        """
+        The is_polling property is a boolean flag, which states whether or not the client object performs a polling
+        activity on the connection.
+        Returns:
+        The boolean property of whether or not polling is enabled
+        """
+        return self._polling_interval is None
+
+    def build_interval_generator(self):
+        """
+        This function builds a new function internally, which has no parameters and acts as a generator, that
+        always yields the same value, which is the one specified by the polling interval attribute.
+        Notes:
+            The function will, as a generator, always yield the value with which it was set up. Changing the polling
+            interval attribute will not change the generator function.
+        Returns:
+        the function object, which is the generator for the interval value
+        """
+        polling_interval = self._polling_interval
+        # Creates an internal function, that always yields the same value, which is the one in the interval attribute
+
+        def gen():
+            yield polling_interval
+
+        return gen
 
     def _send_command(self, command_name, pos_args, kw_args):
         """

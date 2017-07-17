@@ -6,7 +6,7 @@ only once an important message is being sent be the service operating in that co
 that there is no reply.
 This kind of polling service can be build in two main ways:
 - As plain objects: Where the idle time or the interval in which no poll has been performed is being maintained by the
-  service that is also maintining the poller object itself. In such a situation the Poller objects do not offer a great
+  service that is also maintaining the poller object itself. In such a situation the Poller objects do not offer a great
   advantage as they are simply a way of managing the various functions that are used for the polling, but the actual
   poll tracking sill has to be implemented higher level.
 - As Threads: obviously a more elegant approach is to run the Poller parallel and just let it do its thing in the
