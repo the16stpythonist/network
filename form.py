@@ -402,22 +402,26 @@ class FormTransmitterThread(threading.Thread):
 
         # The timeout of receiving the ack after a sending
         self.timeout = timeout
+        self.exception = None
         # The state variables of the Thread and the transmission
         self.running = False
         self.finished = False
 
     def run(self):
-        self.running = True
-        self.send_title()
-        self.wait_ack()
-        self.send_body()
-        self.wait_ack()
-        self.send_appendix()
-        self.wait_ack()
+        try:
+            self.running = True
+            self.send_title()
+            self.wait_ack()
+            self.send_body()
+            self.wait_ack()
+            self.send_appendix()
+            self.wait_ack()
 
-        # Updating the state variables
-        self.running = False
-        self.finished = True
+            # Updating the state variables
+            self.running = False
+            self.finished = True
+        except Exception as exception:
+            self.exception = exception
 
     def send_body(self):
         """
@@ -540,6 +544,17 @@ class FormTransmitterThread(threading.Thread):
         form_body_string = "\n".join(form_body_lines)
         self.form.body = form_body_string
 
+    def raise_exception(self):
+        """
+        In case the Thread has raised an exception, this exception will be saved in the designated 'exception'
+        attribute of the Thread object. If there was an exception this method will simply raise it in the context
+        where the method is being called. If there is no exception, this method will do simply nothing
+        Returns:
+        void
+        """
+        if self.exception is not None:
+            raise self.exception
+
 
 class FormReceiverThread(threading.Thread):
 
@@ -592,7 +607,7 @@ class FormReceiverThread(threading.Thread):
             if self.exception is None:
                 time.sleep(0.0005)
             else:
-                raise self.exception
+                self.raise_exception()
         return self.form
 
     def receive_title(self):
@@ -747,3 +762,14 @@ class FormReceiverThread(threading.Thread):
         void
         """
         self.connection.sendall_bytes(b"ack")
+
+    def raise_exception(self):
+        """
+        In case the Thread has raised an exception, this exception will be saved in the designated 'exception'
+        attribute of the Thread object. If there was an exception this method will simply raise it in the context
+        where the method is being called. If there is no exception, this method will do simply nothing
+        Returns:
+        void
+        """
+        if self.exception is not None:
+            raise self.exception

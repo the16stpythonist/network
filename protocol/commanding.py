@@ -5,6 +5,7 @@ from network.form import FormReceiverThread
 from network.polling import GenericPoller
 
 import threading
+import random
 import queue
 import time
 
@@ -814,8 +815,6 @@ class CommandingHandler(CommandingBase):
                         response = ReturnForm(return_value)
                     except Exception as exception:
                         response = ErrorForm(exception)
-                    # Sending a request for being able to send the reply from
-                    self.send_request()
                     # Sending the response form over a form transmitter Thread
                     self._send_form(response.form)
 
@@ -862,7 +861,8 @@ class CommandingHandler(CommandingBase):
 
 class CommandingClient(CommandingBase):
 
-    def __init__(self, connection, command_context, separation="$separation$", timeout=10, polling_interval=None):
+    def __init__(self, connection, command_context, separation="$separation$", timeout=10, polling_interval=None,
+                 queue_size=10):
         CommandingBase.__init__(connection, command_context, separation)
         self.timeout = timeout
 
@@ -873,43 +873,49 @@ class CommandingClient(CommandingBase):
         polling_function = self.build_polling_function()
         self.poller = GenericPoller(self.connection, interval_generator, polling_function)
 
-        self.response_list = []
-        self.request_queue = queue.PriorityQueue(10)
-        self.running = True
+        # The attribute to store the size of the queue
+        self.queue_size = queue_size
+        self.response_dict = {}
+        self.call_queue = queue.PriorityQueue(10)
+        self.running = False
 
     def run(self):
+        self.running = True
         try:
             while self.running:
                 # Check the Que not to be empty
-                if self.request_queue.empty():
+                if self.call_queue.empty():
                     # Updating the idle time
                     self.idle_time = time.time() - self.last_activity_timestamp
-                    # Checking if the idle time has already been exceeded
-                    if self.poller.is_interval_match(self.idle_time, True):
+                    # First checking if the object actually has polling enabled and then if the poller tells that the
+                    # interval for activity has been exceeded
+                    if self.is_polling and self.poller.is_interval_match(self.idle_time, True):
+                        # Sending a request first
+                        self.send_request()
                         # Polling and then updating the last activity time
                         self.poller.poll()
                         self.update_last_activity_time()
                 else:
-                    request = self.request_queue.get()
-                    # Sending the request to the handler to get the auth to send a form/command
+                    call = self.call_queue.get()
+                    # Sending a request
                     self.send_request()
                     # Sending the actual command form
-                    self._send_command(request[0], request[1], request[2])
-                    # Waiting for the request from the handler, that asks if it can send back the return form
-                    self.wait_request()
+                    call_id, command_name, pos_args, kw_args = self.unpack_call(call)
+                    self._send_command(command_name, pos_args, kw_args)
                     # Receiving the return form and putting it into the list
                     receiver = FormReceiverThread(self.connection, self.separation)
                     receiver.start()
                     response = receiver.receive_form()
-                    self.response_list.append((request, response))
+
+                    # Adding the response to the response dict with the call id as the key
+                    self.response_dict[call_id] = response
 
                     # Updating the last activity
                     self.update_last_activity_time()
-
         except:
             pass
 
-    def execute_command(self, command_name, pos_args, kw_args, blocking=True):
+    def execute_command(self, command_name, pos_args, kw_args, priority=1, blocking=True):
         """
         This method will send the command as a form over the connection and therefore issue the command on the remote
         Handler. Depending on whether the method is executed as blocking or not, the method will either exit as void
@@ -925,15 +931,16 @@ class CommandingClient(CommandingBase):
         Returns:
         -
         """
-        request = (command_name, pos_args, kw_args)
-        self.request_queue.put(request)
+        call_id = self.put_call(command_name, pos_args, kw_args, priority)
         if blocking:
-            while not self.has_response(request):
+            while not self.has_response(call_id):
                 time.sleep(0.01)
             # Getting the Commanding form, that was sent as a response for the command from the buffer and then
             # executing it via the command context object
-            response = self.get_response(request)
+            response = self.get_response(call_id)
             return self.command_context.execute.form(response)
+        else:
+            return call_id
 
     def validate(self):
         """
@@ -951,7 +958,7 @@ class CommandingClient(CommandingBase):
         if not line_string == str(self.command_context_class):
             raise ConnectionAbortedError("The client and server do not have the same command context")
 
-    def get_response(self, request):
+    def get_response(self, call_id):
         """
         If given a request tuple, which consists of the three elements in order: The command name, the commands
         positional arguments as a list and the commands keyword arguments as a dict, this method will search the
@@ -960,28 +967,69 @@ class CommandingClient(CommandingBase):
         Raises:
             KeyError: In case there is no response to the given request yet
         Args:
-            request: The request tuple, for which to return the resulting response
+            call_id: The int id for the call for which to return the response object
 
         Returns:
         The response is a CommandingForm, usually of the type ReturnForm or ErrorForm
         """
-        for response in self.response_list:
-            if response[0] == request:
-                return response[1]
-        raise KeyError("There is no response to the given request yet")
+        # Getting the response and then deleting it from the dict
+        response = self.response_dict[call_id]
+        del self.response_dict[call_id]
 
-    def has_response(self, request):
+        return response
+
+    def has_response(self, call_id):
         """
-        If given a request tuple, which consists of the three elements in order: The command name, the commands
-        positional arguments as a list and the commands keyword arguments as a dict, this method will return the
-        boolean value if a response to that request has already been received and saved into the internal list
+        If given the call id of a issued command to the client, this function will return whether or not the response
+        to that command call has already been received and therefore added to the response dict
         Args:
-            request: The request tuple, for which to return the resulting response
+            call_id: The int id for the call for which to check if the response has already arrived
 
         Returns:
-        The boolean value of whether or not a response has been received already
+        The bool value of whether or not the response to the call correlating to the call id has already been received
         """
-        return request in map(lambda x: x[0], self.response_list)
+        return call_id in self.response_dict.keys()
+
+    def unpack_call(self, call_tuple):
+        """
+        This method will take a call tuple, as it gets popped from the call queue, as the parameter and it will return
+        a tuple of the 4 values: call_id,  command_name, pos_args, kw_args
+        Args:
+            call_tuple: The tuple in the way it was popped from the call queue
+
+        Returns:
+        The tuple (call_id,  command_name, pos_args, kw_args) according to the call tuple passed to the method
+        """
+        call_id = call_tuple[1][0]
+        command_name = call_tuple[1][1]
+        pos_args = call_tuple[1][2]
+        kw_args = call_tuple[1][3]
+        return call_id, command_name, pos_args, kw_args
+
+    def put_call(self, command_name, pos_args, kw_args, priority):
+        """
+        This method will put a request tuple into the request queue of the object, which consists of the command
+        specification passed to this method as parameters.
+        Therefore a call id is created, which will be used to add the response to the response dict once the
+        response has been received.
+        Args:
+            command_name: The name of the command to execute
+            pos_args: The positional arguments of that command
+            kw_args: The keyword arguments of that command
+            priority: The priority of that command execution
+
+        Returns:
+        The int call id, which will later be the id for the response object in the dict
+        """
+        # Getting a id for the request
+        call_id = self._generate_id(command_name)
+        # Generating the request tuple
+        call = (priority, (call_id, command_name, pos_args, kw_args))
+        # Putting the request into the priority queue
+        self.call_queue.put(call)
+
+        # Returning the request id, so that the response can be easily fetched from the dictionary
+        return call_id
 
     @property
     def is_polling(self):
@@ -1031,13 +1079,47 @@ class CommandingClient(CommandingBase):
         self.last_activity_timestamp = time.time()
         self.idle_time = 0
 
+    def procure_random_int_list(self, length, a=100, b=10000):
+        """
+        This method creates a list with the passed length of random integers in the range between a and b.
+        This list will then be used as the stack for managing the id's for retrieving response objects from the
+        dictionary, that stores them.
+        Args:
+            length: The length wanted for the list of random integers
+            a: The start of the range in which to pick the random ints
+            b: The end of the range in which to pick the random ints
+
+        Returns:
+        A list of integers with the length passed to the method call
+        """
+        random_list = []
+        for i in range(length):
+            random_int = self.procure_random_int(a, b)
+            random_list.append(random_int)
+        return random_list
+
+    @staticmethod
+    def procure_random_int(a=100, b=10000):
+        """
+        This method will simply return a random integer number in the range from a to b.
+        This functionality is needed for creating the list of random numbers to be used as id's for the dictionary,
+        that stores the responses the requests, after they have been received
+        Args:
+            a: The start of the range in which to pick a random int number. Defaults to 100
+            b: The end of the range in which to pick a random int number. Defaults 10000
+
+        Returns:
+        A random integer number
+        """
+        return random.randint(a, b)
+
     @staticmethod
     def _polling_function(connection, separation, timeout):
         """
         This method provides the basic function object for the polling function for the GenericPoller to perform the
         polling operation. The function sends a CommandForm to the remote participant calling the time dummy function
         to fetch the local time and send it back as a response.
-        Altough this function has 3 parameters, where as the polling function is expected to implement the connection
+        Although this function has 3 parameters, where as the polling function is expected to implement the connection
         parameter as the only one. This means this method has to be wrapped by a lambda function to preset the
         attributes of the calling CommandClient as fix parameters.
         Args:
@@ -1070,4 +1152,21 @@ class CommandingClient(CommandingBase):
         """
         command_form = CommandForm(command_name, pos_args, kw_args)
         self._send_form(command_form.form)
+
+    @staticmethod
+    def _generate_id(command_name):
+        """
+        This function creates an id based on random modulo hashing
+        Args:
+            command_name: The name of the command, for which to generate an id
+
+        Returns:
+        A string containing a hey number, which is the id for the given command name, randomized
+        """
+        command_name_bytes = command_name.encode()
+        command_name_int = int.from_bytes(command_name_bytes, "big")
+        random_hash_key = random.randint(1, command_name_int)
+        call_id_int = command_name_int % random_hash_key
+        call_id_hex = hex(call_id_int)
+        return call_id_hex
 
