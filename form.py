@@ -552,6 +552,8 @@ class FormReceiverThread(threading.Thread):
 
         # The timeout of receiving the ack after a sending
         self.timeout = timeout
+        self.start_time = None
+        self.exception = None
         # The state variables of the Thread and the transmission
         self.running = False
         self.finished = False
@@ -564,16 +566,20 @@ class FormReceiverThread(threading.Thread):
         self.form = None
 
     def run(self):
-        self.running = True
-        self.receive_title()
-        self.send_ack()
-        self.receive_body()
-        self.send_ack()
-        self.receive_appendix()
-        self.send_ack()
-        self.assemble_form()
-        self.running = False
-        self.finished = True
+        # Catching every exception and in case there is one putting it into the attribute variable
+        try:
+            self.running = True
+            self.receive_title()
+            self.send_ack()
+            self.receive_body()
+            self.send_ack()
+            self.receive_appendix()
+            self.send_ack()
+            self.assemble_form()
+            self.running = False
+            self.finished = True
+        except Exception as exception:
+            self.exception = exception
 
     def receive_form(self):
         """
@@ -583,7 +589,10 @@ class FormReceiverThread(threading.Thread):
         The Form object received through the socket
         """
         while not self.finished:
-            time.sleep(0.001)
+            if self.exception is None:
+                time.sleep(0.0005)
+            else:
+                raise self.exception
         return self.form
 
     def receive_title(self):

@@ -862,14 +862,16 @@ class CommandingHandler(CommandingBase):
 
 class CommandingClient(CommandingBase):
 
-    def __init__(self, connection, command_context, separation="$separation$", polling_interval=None):
+    def __init__(self, connection, command_context, separation="$separation$", timeout=10, polling_interval=None):
         CommandingBase.__init__(connection, command_context, separation)
+        self.timeout = timeout
 
         self.last_activity_timestamp = None
         self.idle_time = 0
         self._polling_interval = polling_interval
         interval_generator = self.build_interval_generator()
-        self.poller = GenericPoller(self.connection, interval_generator, None)
+        polling_function = self.build_polling_function()
+        self.poller = GenericPoller(self.connection, interval_generator, polling_function)
 
         self.response_list = []
         self.request_queue = queue.PriorityQueue(10)
@@ -880,8 +882,13 @@ class CommandingClient(CommandingBase):
             while self.running:
                 # Check the Que not to be empty
                 if self.request_queue.empty():
+                    # Updating the idle time
+                    self.idle_time = time.time() - self.last_activity_timestamp
                     # Checking if the idle time has already been exceeded
-                    pass
+                    if self.poller.is_interval_match(self.idle_time, True):
+                        # Polling and then updating the last activity time
+                        self.poller.poll()
+                        self.update_last_activity_time()
                 else:
                     request = self.request_queue.get()
                     # Sending the request to the handler to get the auth to send a form/command
@@ -1003,6 +1010,16 @@ class CommandingClient(CommandingBase):
             yield polling_interval
 
         return gen
+
+    def build_polling_function(self):
+        """
+        This function creates a new function object, by using the already implemented poll procedure of the static
+        method '_poll_function' wrapped in a lambda expression, that hides the excess parameters which are based on
+        the attributes of the individual CommandClient instance
+        Returns:
+        The function object to be used as the polling function for the GenericPoller object, bing used for the polling##
+        """
+        return lambda conn: self._polling_function(conn, self.separation, self.timeout)
 
     def update_last_activity_time(self):
         """
