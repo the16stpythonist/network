@@ -346,6 +346,54 @@ class Form:
             else:
                 raise ValueError("The body attribute must either be a string or a list os strings")
 
+    @property
+    def body_string(self):
+        """
+        This method will return the body in string format, as it would be written in the message itself.
+        The method simply returns the value of the body attribute, as that already is the string
+        Returns:
+        The body string
+        """
+        return self.body
+
+    @property
+    def title_string(self):
+        """
+        This method will return the title as a string format, by just returning the value of the title attribute, as
+        that is already string by default
+        Returns:
+        The string title
+        """
+        return self.title
+
+    @property
+    def appendix_string(self):
+        """
+        This method will return the appendix of the form in a rather fancy string format (Which means, this is not how
+        the dict would have been converted to string, but it is formatted to be human readable).
+        EXAMPLE:
+            A dict of {"hello2": 12.01, "test":complex(1, 2)} would look like:
+            "{
+            hello2: 12.01
+            test: (1+2j)
+            }"
+
+        Returns:
+        The formatted string of the appendix
+        """
+        string_list = ["{"]
+
+        # Creating a line string for each item in the dictionary, by calling the string conversion on both the value
+        # and the key and putting them as one string separated by one ":"
+        for key, value in self.appendix.items():
+            line_string = " {}: {}".format(str(key), str(value))
+            string_list.append(line_string)
+
+        # Assembling the list of the line strings into an actually line separated string all together
+        string_list.append("}")
+        appendix_string = '\n'.join(string_list)
+        return appendix_string
+
     def __eq__(self, other):
         """
         The magic method for comparing two form objects. Two form objects are equal if the title, the body and the
@@ -363,6 +411,20 @@ class Form:
             if same_title and same_body and same_appendix:
                 return True
         return False
+
+    def __str__(self):
+        """
+        This method will return a string representation of the form, which will be remotely human readable. The
+        string will be structured as following:
+        - The first line will be the title of the form
+        - The following lines will be the lines of the body, just like they will actually be in the form
+        - The appendix will be starting with the dict bracket "{" and the lines in between the closing brackets will
+          be the items of the dict, on which the string conversion was called
+        Returns:
+        The string rep. of the form object
+        """
+        string_list = [self.title_string, self.body_string, self.appendix_string]
+        return '\n'.join(string_list)
 
 
 class FormTransmitterThread(threading.Thread):

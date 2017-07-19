@@ -2,7 +2,6 @@ import socket
 import time
 
 
-
 class SocketWrapper:
     """
     GENERAL
