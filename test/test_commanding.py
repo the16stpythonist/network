@@ -17,7 +17,9 @@ class TestCommandForm(unittest.TestCase):
         self.assertListEqual(command_form.pos_args, pos_args)
         self.assertDictEqual(command_form.key_args, kw_args)
         # Testing if the Form was created correctly
-        body = ["error:replay", "return:reply", "command:time", "pos_args:2"]
+        body = ["error:reply", "return:reply", "command:time", "pos_args:2"]
         appendix = {"pos_args": pos_args, "kw_args": kw_args}
         form = Form("COMMAND", body, appendix)
+        print(str(command_form.form))
+        print(str(form))
         self.assertEqual(command_form.form, form)

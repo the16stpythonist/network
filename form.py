@@ -357,6 +357,23 @@ class Form:
         return self.body
 
     @property
+    def body_list(self):
+        """
+        This method will return the list rep of the body of the form, where this representation is basically just the
+        body string split by the newline characters, which makes the list a list of individual lines of the body string
+        EXAMPLE:
+            The body:
+            "hello:1
+            test:2
+            back:3"
+            >>
+            ["hello:1", "test:2", "back:3"]
+        Returns:
+        The line list of the body string
+        """
+        return self.body.split("\n")
+
+    @property
     def title_string(self):
         """
         This method will return the title as a string format, by just returning the value of the title attribute, as
@@ -406,7 +423,8 @@ class Form:
         """
         if isinstance(other, Form):
             same_title = other.title == self.title
-            same_body = other.body == self.body
+            # List comprehension, where the order is irrelevant
+            same_body = sorted(other.body_list) == sorted(self.body_list)
             same_appendix = other.appendix == self.appendix
             if same_title and same_body and same_appendix:
                 return True
