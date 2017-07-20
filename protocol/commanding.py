@@ -186,7 +186,7 @@ class CommandingForm:
         Returns:
         A list of lists, where each sub list has two string items
         """
-        body_lines = self.body.split()
+        body_lines = self.body.split("\n")
         body_lines_split = []
         for line in body_lines:
             split_line = line.split(":")
@@ -507,7 +507,7 @@ class ReturnForm(CommandingForm):
         Returns:
         The list with the body string lines
         """
-        body_string = ':'.join(["type", self.return_type])
+        body_string = ':'.join(["type", str(self.return_type)])
         return [body_string]
 
     def procure_form_appendix(self):

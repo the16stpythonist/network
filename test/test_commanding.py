@@ -1,4 +1,5 @@
 from network.protocol.commanding import CommandForm
+from network.protocol.commanding import ReturnForm
 
 from network.form import Form
 
@@ -12,6 +13,11 @@ class TestCommandForm(unittest.TestCase):
     basic_kw_args = {"pos1": 123.0, "pos2": [1, 2, 3]}
 
     def test_creation_command_basic(self):
+        """
+        Testing the creation of a CommandForm from command spec
+        Returns:
+        void
+        """
         command_form = self.basic_command_form
         # Testing if the parameters are correct transitioned to the attributes
         self.assertEqual(command_form.command_name, self.basic_command_name)
@@ -22,6 +28,11 @@ class TestCommandForm(unittest.TestCase):
         self.assertEqual(command_form.form, form)
 
     def test_creation_form_basic(self):
+        """
+        Testing the creation of a CommandForm form a Form object
+        Returns:
+        void
+        """
         # Getting the basic form, on which the CommandForm is to be based
         form = self.basic_form
 
@@ -62,4 +73,66 @@ class TestCommandForm(unittest.TestCase):
 
         # Creating the form object from the title, body and appendix & returning that
         form = Form("COMMAND", body, appendix)
+        return form
+
+
+class TestReturnForm(unittest.TestCase):
+
+    basic_return_value = ["A list of strings", "with strings"]
+
+    def test_basic_value_creation(self):
+        """
+        Testing the creation of a ReturnForm with a list as return value
+        Returns:
+        void
+        """
+        # Creating the basic form
+        return_form = self.basic_return_form
+
+        # Testing if the ReturnForm object still has the correct value saved as attribute
+        self.assertListEqual(return_form.return_value, self.basic_return_value)
+        # Testing if the Form created by the ReturnForm wrapper matches the desired result
+        form = self.basic_form
+        self.assertEqual(return_form.form, form)
+
+    def test_basic_form_creation(self):
+        """
+        Testing the creation of a ReturnForm from a Form object
+        Returns:
+        void
+        """
+        # Creating the ReturnForm from the Form object
+        form = self.basic_form
+        return_form = ReturnForm(form)
+
+        # Testing if the form is still the same as attribute
+        self.assertEqual(return_form.form, form)
+        # Testing if the return value has been extracted correctly
+        self.assertListEqual(return_form.return_value, self.basic_return_value)
+
+    @property
+    def basic_return_form(self):
+        """
+        This method simply creates a ReturnForm object from the basic return value, which is class variable of this
+        TestCase
+        Returns:
+        The ReturnForm object
+        """
+        return_form = ReturnForm(self.basic_return_value)
+        return return_form
+
+    @property
+    def basic_form(self):
+        """
+        This method returns the Form object, which was built manually and resembles the form, that is SUPPOSED to be
+        created by the ReturnForm wrapper, when passed the basic return value set as class attribute of this TestCase
+        Returns:
+        The Form object
+        """
+        type_string = str(type(self.basic_return_value))
+        body = ["type:{}".format(type_string)]
+        appendix = {"return": self.basic_return_value}
+
+        # Creating the form from the desired appendix & body
+        form = Form("RETURN", body, appendix)
         return form
