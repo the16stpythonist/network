@@ -539,7 +539,7 @@ class FormTransmitterThread(threading.Thread):
         Returns:
         void
         """
-        response = self.connection.receive_length_bytes(3)
+        response = self.connection.receive_length_bytes(3, self.timeout)
         if not response == b'ack':
             raise ValueError("Incorrect ACK sent")
 

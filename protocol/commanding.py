@@ -1,3 +1,10 @@
+"""
+
+WHAT TO MAKE THE COMMANDING PROTOCOL BETTER?
+- ONe important factor is, that the communication is based on sending a lot of small messages back and forth over the
+  connection (This is also a main problem of the form transmission mechanism). It would be WAY better if that could be
+  reduced to bigger, but less messages
+"""
 from network.form import Form
 from network.form import FormTransmitterThread
 from network.form import FormReceiverThread
@@ -42,6 +49,13 @@ class CommandContext:
         Returns:
         Either the return of the executed command or the return value of a remote executed function
         """
+        if isinstance(form, Form):
+            if form.title == "COMMAND":
+                form = CommandForm(form)
+            elif form.title == "RETURN":
+                form = ReturnForm(form)
+            elif form.title == "ERROR":
+                form = ErrorForm(form)
         if isinstance(form, CommandingForm):
             if isinstance(form, CommandForm):
                 # Getting the method, that actually executes the behaviour for that command
@@ -93,7 +107,7 @@ class CommandContext:
         command_method_name = ''.join(string_list)
         return command_method_name
 
-    def command_time(self, pos_args, kw_args):
+    def command_time(self,):
         """
         Some sort of dummy command, which just returns the time
         Args:
@@ -575,6 +589,7 @@ class ErrorForm(CommandingForm):
             raise TypeError("The Error form has to be passed either form or exception object!")
 
     def procure_form_appendix(self):
+        #TODO: CHANGE THE WHOLE ERROR FORM CONCEPT
         """
         This method will create the appendix of the form, which is supposed to represent this object. If the
         appendix encoder used for the form is able to encode the exception object itself a dictionary will be sent,
@@ -583,7 +598,7 @@ class ErrorForm(CommandingForm):
         Returns:
         dict
         """
-        if self.appendix_encoder.is_serializable(self.exception):
+        if False:
             return {"error": self.exception}
         else:
             return {}
@@ -598,6 +613,7 @@ class ErrorForm(CommandingForm):
         # Getting the name of the exception
         exception_name = self.procure_exception_name()
         exception_message = self.procure_exception_message().replace("\n", "")
+        exception_message = exception_message.replace(":", ";")
         name_line = self.assemble_body_line("name", exception_name)
         message_line = self.assemble_body_line("message", exception_message)
         return [name_line, message_line]
@@ -650,12 +666,13 @@ class ErrorForm(CommandingForm):
         """
         exception_name = self.spec["name"]
         exception_message = self.spec["message"]
-        return ''.join([exception_name, "('", exception_message, "')"])
+        return ''.join([exception_name, '("', exception_message, '")'])
 
 
 class CommandingBase(threading.Thread):
 
     def __init__(self, connection, command_context, separation="$separation$"):
+        threading.Thread.__init__(self)
         self.connection = connection
         self.separation = separation
         self.command_context = command_context
@@ -671,7 +688,7 @@ class CommandingBase(threading.Thread):
         void
         """
         # Sending a request to the other side of the connection
-        self.connection.sendall_string("request")
+        self.connection.sendall_string("request\n")
         # Waiting for the ack
         line_string = self.wait_line()
         if line_string != "ack":
@@ -720,7 +737,7 @@ class CommandingBase(threading.Thread):
         Returns:
 
         """
-        command_context_type_string = str(self.command_context_class)
+        command_context_type_string = str(self.command_context_class) + "\n"
         self.connection.sendall_string(command_context_type_string)
 
     def validate(self):
@@ -795,35 +812,43 @@ class CommandingHandler(CommandingBase):
         self.running = True
 
     def run(self):
+        """
+        When the CommandingHandler Thread os being started it will first validate  with the connected client (For a
+        explanation read the validate method). Then the main loop will be entered. In the main loop the handler will
+        call a blocking receive call on the connection, waiting for a communication request coming from the client.
+        After a request has been received and responded with an ack, A FormReceiverThread will be started to
+        receive the CommandForm, which specifies the command to be executed, The command form will be executed by the
+        CommandContext and depending on the case a ReturnForm or a ErrorForm will be created and then sent back via
+        the FormTransmitterThread.
+        Notes:
+            It is important, that the receive call in the main loop is blocking and thus the Thread can not be
+            terminated by simply inverting the running flag, but the socket has to be closed forcefully. This method
+            will buffer the exception in such a case.
+        Returns:
+        void
+        """
+        try:
+            # Checking if the connection client is compatible
+            self.validate()
+            while self.running:
+                self.wait_request()
 
-        while self.running:
-            try:
-                # Checking if the connection client is compatible
-                self.validate()
-                while self.running:
-                    # Waiting for a request to be received over the connection
-                    self.wait_request()
-                    # Receiving the form
-                    receiver = FormReceiverThread(self.connection, self.separation)
-                    receiver.start()
-                    form = receiver.receive_form()
-                    # Creating the commanding form wrapper from the plain form
-                    commanding_form = self.evaluate_commanding_form(form)
-                    # Executing the commanding form
-                    try:
-                        return_value = self.execute_form(commanding_form)
-                        response = ReturnForm(return_value)
-                    except Exception as exception:
-                        response = ErrorForm(exception)
-                    # Sending the response form over a form transmitter Thread
-                    self._send_form(response.form)
-
-            except ConnectionAbortedError as connection_aborted:
-                # This is the case if the type of command contexts does not match between server and client
-                pass
-
-            except ConnectionError as connection_error:
-                pass
+                # Receiving the form
+                receiver = FormReceiverThread(self.connection, self.separation)
+                receiver.start()
+                form = receiver.receive_form()
+                # Creating the commanding form wrapper from the plain form
+                commanding_form = self.evaluate_commanding_form(form)
+                # Executing the commanding form
+                try:
+                    return_value = self.execute_form(commanding_form)
+                    response = ReturnForm(return_value)
+                except Exception as exception:
+                    response = ErrorForm(exception)
+                # Sending the response form over a form transmitter Thread
+                self._send_form(response.form)
+        except ConnectionAbortedError:
+            pass
 
     def execute_form(self, commanding_form):
         """
@@ -845,9 +870,13 @@ class CommandingHandler(CommandingBase):
         # Sending the type of command context in which the server is based on to the client
         self.send_command_context_type()
         # Receiving the type of command context on which the client is based on from the client
-        line_string = self.connection.receive_line()
+        line_string = self.connection.receive_line(10)
         if str(self.command_context_class) != line_string:
             raise ConnectionAbortedError("The client and server do not have the same command context")
+
+    def stop(self):
+        self.running = False
+        self.connection.sock.close()
 
     def _check_command_context(self):
         """
@@ -863,7 +892,7 @@ class CommandingClient(CommandingBase):
 
     def __init__(self, connection, command_context, separation="$separation$", timeout=10, polling_interval=None,
                  queue_size=10):
-        CommandingBase.__init__(connection, command_context, separation)
+        CommandingBase.__init__(self, connection, command_context, separation)
         self.timeout = timeout
 
         self.last_activity_timestamp = None
@@ -882,6 +911,7 @@ class CommandingClient(CommandingBase):
     def run(self):
         self.running = True
         try:
+            self.validate()
             while self.running:
                 # Check the Que not to be empty
                 if self.call_queue.empty():
@@ -889,16 +919,20 @@ class CommandingClient(CommandingBase):
                     self.idle_time = time.time() - self.last_activity_timestamp
                     # First checking if the object actually has polling enabled and then if the poller tells that the
                     # interval for activity has been exceeded
+                    """
                     if self.is_polling and self.poller.is_interval_match(self.idle_time, True):
                         # Sending a request first
                         self.send_request()
                         # Polling and then updating the last activity time
                         self.poller.poll()
                         self.update_last_activity_time()
+                    """
                 else:
                     call = self.call_queue.get()
+
                     # Sending a request
                     self.send_request()
+
                     # Sending the actual command form
                     call_id, command_name, pos_args, kw_args = self.unpack_call(call)
                     self._send_command(command_name, pos_args, kw_args)
@@ -934,11 +968,11 @@ class CommandingClient(CommandingBase):
         call_id = self.put_call(command_name, pos_args, kw_args, priority)
         if blocking:
             while not self.has_response(call_id):
-                time.sleep(0.01)
+                time.sleep(0.001)
             # Getting the Commanding form, that was sent as a response for the command from the buffer and then
             # executing it via the command context object
             response = self.get_response(call_id)
-            return self.command_context.execute.form(response)
+            return self.command_context.execute_form(response)
         else:
             return call_id
 
@@ -952,7 +986,7 @@ class CommandingClient(CommandingBase):
         void
         """
         # Receiving the command context type string from the handler
-        line_string = self.connection.receive_line()
+        line_string = self.connection.receive_line(10)
         # Sending the own command context type over the connection
         self.send_command_context_type()
         if not line_string == str(self.command_context_class):

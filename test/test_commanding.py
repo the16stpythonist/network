@@ -1,9 +1,16 @@
 from network.protocol.commanding import CommandForm
 from network.protocol.commanding import ReturnForm
+from network.protocol.commanding import ErrorForm
+from network.protocol.commanding import CommandContext
+from network.protocol.commanding import CommandingHandler
+from network.protocol.commanding import CommandingClient
 
 from network.form import Form
 
+from network.test.util import connections
+
 import unittest
+import time
 
 
 class TestCommandForm(unittest.TestCase):
@@ -136,3 +143,27 @@ class TestReturnForm(unittest.TestCase):
         # Creating the form from the desired appendix & body
         form = Form("RETURN", body, appendix)
         return form
+
+
+class TestCommandingProtocol(unittest.TestCase):
+
+    def test_basic_exchange(self):
+
+        # Creating a pair of connections
+        conn1, conn2 = connections()
+
+        # Creating a Commanding Context and starting a CommandingHandler on that
+        command_context = CommandContext()
+        command_handler = CommandingHandler(conn1, command_context)
+
+        # Creating the CommandingClient and starting all the Threads
+        command_client = CommandingClient(conn2, command_context, queue_size=100)
+        command_handler.start()
+        command_client.start()
+
+        return_value = command_client.execute_command("time", [], {})
+        self.assertIsInstance(return_value, float)
+
+        command_handler.stop()
+        command_client.running = False
+

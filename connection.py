@@ -520,9 +520,9 @@ class SocketConnection(Connection):
         # Setting up the time for the timeout detection
         start_time = time.time()
         while len(data) < length:
+
             received = self.sock.recv(length - len(data))
 
-            # Checking if there is nothing to receive anymore, before the specified amount was reached
             if not received:
                 raise EOFError("Only received ({}|{}) bytes from the socket".format(len(bytes), bytes))
 
@@ -533,6 +533,7 @@ class SocketConnection(Connection):
 
             data += received
 
+        self.sock.setblocking(True)
         return data
 
     def wait_length_string(self, length):
