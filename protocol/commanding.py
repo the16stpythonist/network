@@ -123,6 +123,36 @@ class CommandContext:
 class CommandingForm:
     """
     INTERFACE
+    The CommandingForm is the base class for all the Form wrappers used in the CommandingProtocol.
+
+    The Form wrappers have the overall purpose of creating a form according to their type and the parameters they have
+    been given, which the form is supposed to contain.
+
+    This base class has to be passed the finished Form object, which has been created during construction and the
+    property methods for accessing the Form attributes like title, body, appendix directly are provided by this super
+    class already.
+    Furthermore this base class already implements the method, with which the form can be created, but for this
+    creation of the form a title, body and appendix are needed, thus this class also enforces sub classes, inheriting
+    from it to implement the methods, which assemble the correct title, body and apppendix according to the parameters
+    they have been passed.
+    At last this base class also provides the functionality of creating the 'spec' dict directly from the Form it has
+    been passed. The spec dict is a representation if the body of the Form, where each entry is one line in the body
+    string, the key being the string before the ':' separator and the value being the string adter until the new line.
+
+    GENERAL STRUCTURE OF A COMMANDING FORM
+    A CommandingForm wrapper creates a Form object, which is then supposed to be sent over the network. This Form has
+    the basic structure:
+    - Title: The title tells which type CommandingForm has created the Form, by a string in caps
+    - Body: The body specifies general information in dictionary like format, separated by newline characters. Each
+      each line in the body is separated by a ':' character between the key and the value of the dict like relation.
+      This also implicates, that a value in the body cannot possibly contain a ':' character!
+    - Appendix: This is a python dictionary object, serialized, and can contain everything possible according to the
+      limitations of the encoder and is absolutely up to the specific sub class
+
+    Attributes:
+        form: The actual Form object, that has to be created to be sent over the network
+        spec: The dictionary, which contains an entry for every line in the body of the Form, with the value being the
+            sub string before the separator ':' occurred and the value being the sub string after
     """
     def __init__(self, form):
         self.form = form
