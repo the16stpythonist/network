@@ -173,6 +173,40 @@ class PickleAppendixEncoder(AppendixEncoder):
             return False
 
 
+class FormFrame:
+
+    def __init__(self, title, body, appendix):
+        self._title = title
+        self._body = body
+        self._appendix = appendix
+
+    @property
+    def valid(self):
+        raise NotImplementedError()
+
+    @property
+    def empty(self):
+        raise NotImplementedError()
+
+    @property
+    def title(self):
+        raise NotImplementedError()
+
+    @property
+    def body(self):
+        raise NotImplementedError()
+
+    @property
+    def appendix(self):
+        raise NotImplementedError()
+
+    def __eq__(self, other):
+        raise NotImplementedError()
+
+    def __str__(self):
+        raise NotImplementedError()
+
+
 class Form:
     """
     GENERAL

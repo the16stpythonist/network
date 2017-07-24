@@ -120,6 +120,173 @@ class CommandContext:
         return time.time()
 
 
+class CommandungForm:
+
+    def __init__(self, spec_dict):
+        self._spec = spec_dict
+        # Checking if the actually is a dict
+        self._check_spec()
+
+        # Building the form according to the specific implementations
+        self.form = self.build_form()
+
+    def build_form(self):
+        """
+        The CommandingForm sub class already implements the creation of the actual Form object with this method, which
+        will be used inside of the constructor of this base class to assign the Form to a instance attribute. But
+        because the form is very specific to every certain sub class and their instances, the sub classes have to
+        implement the three methods 'procure_title', 'procure_body' and 'procure_appendix' in which they specify, how
+        these three parts of a Form are derived from the specific parameters. Those methods are then used in this
+        method to actually create the Form
+
+        Returns:
+        The Form object created from the specific parameters from the CommandingForm wrapper
+        """
+        # Creating the title, body and appendix of the form from the methods, that per interface have to be
+        # implemented by every sub class of CommandingForm
+        title = self.procure_title()
+        body = self.procure_body()
+        appendix = self.procure_appendix()
+
+        # Creating the actual Form object from those
+        form = Form(title, body, appendix)
+        return form
+
+    def procure_title(self):
+        """
+        This method has to be implemented by every sub class of the CommandingForm and has to specify how the title
+        of a form data structure can be derived from the data given to the specific instance of the sub class
+
+        Returns:
+        The string title of a form data structure
+        """
+        raise NotImplementedError()
+
+    def procure_body(self):
+        """
+        This method has to be implemented by every sub class of the CommandingForm and has to specify how the body
+        of a form data structure can be derived from the data given to the specific instance of the sub class
+
+        Returns:
+        The list of strings, that specify a form body
+        """
+        raise NotImplementedError()
+
+    def procure_appendix(self):
+        """
+        This method has to be implemented by every sub class of the CommandingForm and has to specify how the appendix
+        of a form data structure can be derived from the data given to the specific instance of the sub class
+
+        Returns:
+        Whatever object to be sent as a appendix of the form. The object has to be endcodable by the form
+        """
+        raise NotImplementedError()
+
+    def __eq__(self, other):
+        """
+        Generally a CommandingForm object can only be compared to either another CommandingForm object or a Form
+        object directly.
+        - Comparing with CommandingForm: The comparison basically is a dictionary comparison between the spec
+          dicts of the both objects, because they define, what the specific CommandingForms instances look like
+        - Comparing with Form: The form is used to build a new instance of a CommandingForm of the type which the
+          comparison is called on and then the dictionaries of those are being compared.
+        Notes:
+            Comparing to a CommandingForm is way more efficient, since no additional CommandingForm has to be
+            created, which is the case if compared with a Form
+        Args:
+            other: The object with which the CommandingForm is being compared with. This has to be some sort
+                of CommandingForm or Form object.
+
+        Returns:
+        The boolean value of whether or not the two objects are equal
+        """
+        # Checking if the compared object is also if the type CommandingForm or Form
+        if isinstance(other, CommandungForm):
+
+            # Simply checking if the two spec dictionaries are the same
+            return dict(self) == dict(other)
+
+        elif isinstance(other, Form):
+
+            # Creating a CommandingForm object of the type on which this method is called from the given form
+            other_commanding_form = self.__class__.from_form(other)
+            # Now Comparing the spec dicts of those two CommandingForms
+            return dict(self) == dict(other_commanding_form)
+
+        else:
+            return False
+
+    def __dict__(self):
+        """
+        The CommandingForm base class dictates, that every subclass has to manage the specific data meant to be
+        wrapped into a form for network transmission in a dictionary, mor specifically the _spec dictionary
+        as a instance attribute. When calling the dict conversion on a CommandingForm this underlying dictionary
+        can be returned directly.
+
+        Returns:
+        The dictionary, upon which's entries the CommandingForm is based on
+        """
+        return self._spec
+
+    def __getitem__(self, item):
+        """
+        The CommandingForm base class dictates, that every subclass is based on a dictionary, more specifically
+
+        Args:
+            item: The string key for the item to get from the internal dictionary
+
+        Returns:
+        The dict value of the key, whatever the type may be
+        """
+        return self._spec[item]
+
+    def __contains__(self, item):
+        """
+        This method gets called when the "... in <CommandingForm>" gets called and returns whether the given string
+        is a key in the internal dictionary of the CommandingForm instance checked
+        Args:
+            item: The string of the key to be checked if actually a key in the internal dict of the object
+
+        Returns:
+        The boolean value of whether or not the string key is part of the object
+        """
+        return item in self._spec.keys()
+
+    def __str__(self):
+        raise NotImplementedError()
+
+    @staticmethod
+    def from_form(form):
+        """
+        Every CommandingForm is supposed to be able to be created from the very specific parameters correlating to the
+        function of the specific sub class of CommandingForm and also the CommandingForm is supposed to be
+        'derivable' from a given Form object, so that the CommandingForm wrapper can create Forms based on specific
+        parameters and also destill those out again, when received on the other end.
+        The process of creating the form from specific parameters is assigned to the regular construction and the
+        backward construction from the form is supposed to be done with this static class which returns for every
+        sub class of CommandingForm a method, that returns a instance of that class with the informations from within
+        the Form
+        Args:
+            form: The Form object to be turned into a CommandingForm wrapper
+
+        Returns:
+        The CommandingForm sub class instance, which implements this method explicitly
+        """
+        raise NotImplementedError()
+
+    def _check_spec(self):
+        """
+        This method checks the type of the spec dict in the way, that it raises an erro in case the _spec attribute
+        is not a dict.
+        Raises:
+            TypeError: In case the _spec attribute is not a dict
+        Returns:
+        void
+        """
+        if not isinstance(self._spec, dict):
+            raise TypeError("The spec of CommandingForm has to be dict")
+
+
 class CommandingForm:
     """
     INTERFACE
