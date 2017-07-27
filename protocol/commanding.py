@@ -124,6 +124,9 @@ class CommandungForm:
 
     def __init__(self, spec_dict):
         self._spec = spec_dict
+        # Adding the title title of the form to the spec dict
+        self._spec["title"] = self.procure_title()
+
         # Checking if the actually is a dict
         self._check_spec()
 
@@ -154,13 +157,24 @@ class CommandungForm:
 
     def procure_title(self):
         """
-        This method has to be implemented by every sub class of the CommandingForm and has to specify how the title
-        of a form data structure can be derived from the data given to the specific instance of the sub class
+        This method actually implements the the creation of the Form title from the specific sub class, because for
+        the commanding protocol the title is defined as being derived/connected with the purpose of the class and
+        therefore the class name.
+        The class name has to have the format '<Purpose>Form', where purpose is a single word briefly describing
+        what the specific sub class is being used for. And exactly that substring is calculated and in all-upper-case
+        used as the title for each of those Forms
 
         Returns:
-        The string title of a form data structure
+        The string title of the form. (Only characters, all upper case)
         """
-        raise NotImplementedError()
+        # Getting the class name of the specific sub class
+        class_name_string = str(self.__class__)
+        # Ripping the class name of the Form sub string, leaving only the substring that specifies the purpose of the
+        # sub class
+        title_string = class_name_string.replace("<class '", "").replace("Form'>", "")
+        # Making it all upper case
+        title_string_upper = title_string.upper()
+        return title_string_upper
 
     def procure_body(self):
         """
@@ -254,6 +268,16 @@ class CommandungForm:
 
     def __str__(self):
         raise NotImplementedError()
+
+    def items(self):
+        """
+        This method returns the items iterator of the internal spec dictionary. The iterator will return tuples
+        with (key, value) of the dict with each iteration.
+
+        Returns:
+        The items iterator for the spec dict
+        """
+        return self._spec.items()
 
     @staticmethod
     def from_form(form):
@@ -512,128 +536,89 @@ class CommandingForm:
         return body_line
 
 
-class CommandForm(CommandingForm):
+class CommandForm(CommandungForm):
 
-    def __init__(self, command, pos_args=[], kw_args={}, return_handle="reply", error_handle="reply"):
-        # Initializing the attributes for the command form
-        if isinstance(command, Form):
-            CommandingForm.__init__(self, command)
-            self.check_type()
-            # Loading the data from the form
-            self.command_name = self.procure_command_name()
-            self.pos_args = self.procure_positional_args()
-            self.key_args = self.procure_keyword_args()
-            self.error_handle = self.procure_error_handle()
-            self.return_handle = self.procure_return_handle()
-        elif isinstance(command, str):
-            # The string name of the command to be called in the remote location
-            self.command_name = command
-            # The positional arguments for the command call
-            self.pos_args = pos_args
-            # The keyword arguments for the command call
-            self.key_args = kw_args
-            # The handles are string identifiers about how the return value and the error are suppose to be treated
-            self.error_handle = error_handle
-            self.return_handle = return_handle
-            # Building the form from the information about the command
-            form = self.build_form()
-            CommandingForm.__init__(self, form)
+    def __init__(self, command, pos_args=[], kw_args={}, return_mode="reply", error_mode="reply"):
+        # Creating dictionary, which holds the parameters of the object
+        spec = {
+            "command": command,
+            "pos_args": pos_args,
+            "kw_args": kw_args,
+            "return_mode": return_mode,
+            "error_mode": error_mode
+        }
 
-    def procure_form_appendix(self):
+        # Passing the dict to the constructor of the base class, as it is assigned as the instance attribute _spec
+        # there, also base class provides key indexing magic method for the instance with that dict
+        CommandungForm.__init__(self, spec)
+
+    def procure_body(self):
         """
-        This method will create the appendix dictionary for the form based on what psoitional and kw arguments have
-        been passed to the CommandForm object
+        This method creates the body string from the command call parameters given to the object, by creating a list
+        of strings, which contain the spec dict keys of those attributes to be sent via the body of th form as a first
+        substring, separated by a ':' character from their actual value.
+        Examples:
+            body = ["key1:value1", "key2:value2"]
         Returns:
-        The dictionary, containing the pos and kw args for the command call
+        The list with string lines, that specify the body of the Form
         """
-        return {"pos_args": self.pos_args, "kw_args": self.key_args}
+        # Creating the line list for the form body with the relevant information about the command name, the return
+        # mode and the error mode. Then returning that list so it can be used as the body parameter for the Form constr.
+        body_line_list = [
+            self._procure_body_line("command"),
+            self._procure_body_line("return_mode"),
+            self._procure_body_line("error_mode")
+        ]
 
-    def procure_form_body(self):
+        return body_line_list
+
+    def _procure_body_line(self, key):
         """
-        This method first creates the spec dictionary from the data about the command stored in the attributes of the
-        object, that means about the command name, the return and error mode and the amount of pos args. The it
-        assembles this dictionary into the actual body string list
+        This method takes the string key of a entry of the spec dict and therefore the name of a attrubute if the
+        object and then merges this string key with the value into a single string, separated by the ':' character,
+        after calling the string conversion in the value.
+        Raise:
+            KeyError: In case the the specified string does not specify an actual parameter in the dict
+        Args:
+            key: The string name of a attribute of the object, which is in the spec dict, that is supposed to be merged
+                with its value into a line for the body of the form.
+
         Returns:
-        The list of strings, which are supposed to be the lines of the body string of a form
+        The string, that consists if both the given string key and the corresponding value of the spec dict
         """
-        string_list = []
-        # Getting the spec of the form on which to base the body string
-        spec = self.procure_form_spec()
-        # Making a new line for each dictionary entry
-        for key, value in spec.items():
-            line_string = ':'.join([key, value])
-            string_list.append(line_string)
-        # Appending all the lines to a body, separated by newline characters
-        return string_list
+        # Simply Joining the key and the value of the chosen entry of the spec dict with the ':' string as separator
+        line_string = ':'.join([key, self[key]])
+        return line_string
 
-    def procure_form_spec(self):
+    def procure_appendix(self):
         """
-        This method assembled the spec dictionary from the data given for the command form
+        This method creates the Form appendix from command call parameters given. The appendix will be a dict object
+        with exactly two entries, one for the positional arguments of the command call, which will be a list of
+        elements, the other a dict for the keyword arguments for the function, given as a dictionary.
+        Examples:
+            appendix = {
+                         'pos_args': ['one', 'two']
+                         'kw_args' : {'three': 3}
+                       }
+
         Returns:
-        the dictionary with the string key value pairs for a command form
+        The dict object to be used as the appendix of the form object
         """
-        spec = dict()
-        spec["error"] = self.error_handle
-        spec["return"] = self.return_handle
-        spec["command"] = self.command_name
-        spec["pos_args"] = str(len(self.pos_args))
-        return spec
+        appendix = {
+            "pos_args": self.pos_args,
+            "kw_args": self.kw_args,
+        }
+        return appendix
 
-    def procure_return_handle(self):
+    def _procure_pos_args_length(self):
         """
-        This method will get the return handle string from the spec dict
+        This method will return the length of the pos args list, which means the int amount pos args specified for
+        the function call.
+
         Returns:
-        the string return handle
+        int
         """
-        self.check_return_handle()
-        return_handle = self.spec["return"]
-        return return_handle
-
-    def procure_error_handle(self):
-        """
-        This method will get the error handle from the spec dict
-        Returns:
-        The string error handle identifier
-        """
-        self.check_error_handle()
-        error_handle = self.spec["error"]
-        return error_handle
-
-    def procure_positional_args(self):
-        """
-        This method gets the positional arguments list from the appendix dict
-        Returns:
-        the list of positional arguments for the command call
-        """
-        self.check_pos_args()
-        pos_args = self.appendix["pos_args"]
-        if not isinstance(pos_args, list):
-            raise TypeError("The positional arguments are supposed to be list!")
-        return pos_args
-
-    def procure_keyword_args(self):
-        """
-        This method gets the key word argument dict from the appendix dict of the form
-        Returns:
-        The dictionary, that specifies the kewword arguments for the command call
-        """
-        kw_args = self.appendix["kw_args"]
-        if not isinstance(kw_args, dict):
-            raise TypeError("The keyword arguments are supposed to be dict!")
-        return kw_args
-
-    def procure_command_name(self):
-        """
-        This method gets the command name for the command to be issued/represented by this form from the spec dict,
-        which is based on the information in the body of the form.
-        Returns:
-
-        """
-        # Checking for the existence of the command name in the spec of the body; raises AttributeError if not
-        self.check_command_name()
-        # Getting the command name from the dict and returning it
-        command_name = self.spec["command"].strip()
-        return command_name
+        return len(self.pos_args)
 
     def check_appendix(self):
         """
@@ -652,51 +637,64 @@ class CommandForm(CommandingForm):
         if entries:
             raise KeyError("The entries of form appendix do not match command form!")
 
-    def check_command_name(self):
+    @property
+    def error_mode(self):
         """
-        This method checks if the 'command' field was specified in the body of the form and raises an error if that is
-        not the case
-        Raises:
-            AttributeError: In case the key 'command' is not in the spec dict
-        Returns:
-        void
-        """
-        self.check_spec_key("command")
+        A string flag, which signals, which behaviour for an eventual exception/error is desired for the server
+        side of the execution. At this point there is the only option 'reply' which will cause the server to send
+        back the error as a separate form.
 
-    def check_pos_args(self):
-        """
-        This method checks if the spec dictionary, which is based on the form body contains an entry, that is named
-        'pos_args', which is supposed to be a int number for the amount of pos args to be given to the command call.
-        Also checks the conversion.
-        Raises:
-            AttributeError: in case the entry is not even in the spec dict
-            TypeError: In case the value to the entry is not int convertable
         Returns:
-        void
+        The string flag for the error behaviour
         """
-        self.check_spec_key("pos_args")
-        try:
-            int(self.spec["pos_args"].strip())
-        except ValueError:
-            raise TypeError("The pos_args entry is supposed to be integer type convertable")
+        return self["error_mode"]
 
-    def check_error_handle(self):
+    @property
+    def return_mode(self):
         """
-        This method checks if the spec dictionary, which is based in the body string of the form, contains an entry
-        about the error handle of the command call.
-        Returns:
-        void
-        """
-        self.check_spec_key("error")
+        A string flag, which signals, which behaviour for the return value of the command call is desired from the
+        server side of the execution. At the moment there is the only option 'reply', which will cause the server
+        to send the return of the command call back as a separate form.
 
-    def check_return_handle(self):
-        """
-        This method checks if the spec dictionary, which is based on the body string of the form, contaisn an entry
-        about the return handle of the command call.
         Returns:
-        void
+        The string flag for the return behaviour
         """
-        self.check_spec_key("return")
+        return self["return_mode"]
+
+    @property
+    def kw_args(self):
+        """
+        The dictionary, which is representing the keyword arguments of the command call. The keys of this dict
+        have to be strings with the exact same names as the kw args have been defined in the corresponding function
+        in the CommandContext. As usual for a dictionary, the order is irrelevant.
+
+        Returns:
+        The dict, which represents the kw args for the command call
+        """
+        return self["kw_args"]
+
+    @property
+    def pos_args(self):
+        """
+        The list, containing the positional arguments, which ought ti be used for the function call. The elements
+        of the list have to be in the same order as the pos args of the command to be executed are defined for the
+        corresponding function of the CommandContext
+
+        Returns:
+        The list of elements used as the positional arguments of the function
+        """
+        return self["pos_args"]
+
+    @property
+    def command_name(self):
+        """
+        The name of the command to be executed in the remote server, given as a string.
+        The string is not allowed to contain whitespaces.
+
+        Returns:
+        The string command name of the command to be executed
+        """
+        return self["command_name"]
 
 
 class ReturnForm(CommandingForm):
