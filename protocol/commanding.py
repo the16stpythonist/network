@@ -121,7 +121,58 @@ class CommandContext:
 
 
 class CommandungForm:
+    """
+    INTERFACE
+    The CommandingForm is the base class for all the Form wrappers used in the CommandingProtocol.
 
+    The Form wrappers have the overall purpose of creating a form according to their type and the parameters they have
+    been given, which the form is supposed to contain.
+
+    BASIC DESIGN
+    This base class of those from wrappers has to be passed, whats called the spec dictionary, which is the dictionary,
+    that contains all the parameters, which together completely describe the specific instance of the commanding form
+    sub class. The dictionary is a substitute for using real attributes one could say.
+    This base class then implements all the methods, effectively making the class a dict referential as well, allowing
+    direct indexing and iteration on that 'attribute-spec' dict.
+    This pattern was chosen, because it allows to make a really generic assumption about each CommandingForm, which is
+    that all the important parameters can always be accessed through the iterable dict. And for simplicity the
+    individual sub classes can still simulate the access of actual object attributes by wrapping access to certain
+    value of the dict with property decorated methods.
+
+    FORM CREATION
+    The base class also creates the actual form, for which the wrappers are originally designed, in the base class
+    constructor as a separate attribute. The only thing a sub class of the CommandingForm has to do is to implement
+    the methods 'procure_body' and 'procure_appendix', create the body and appendix of a form from the specific
+    parameters given to each instance upon creation.
+    The title of the Form is also created by the base class...
+
+    THE TITLE
+    The title is being created from the class name of each sub class of the CommandingForm. This can be done, by
+    enforcing the following naming convention for the class name of such a sub class.
+    The sub class has to be named <Purpose>Form, where Purpose is a slim description of what defines that sub class,
+    for example CommandForm, ReturnForm...
+
+    CREATING COMMANDING FORM FROM FORM
+    Since this is a base class, that is supposed to simplify the communication over a connection, the data (Form) to
+    send does not only have to be created from abstract specifications about the functionality, i.e. the command name
+    args, return, but also that info has to be created from the Form. For that purpose this base class
+    enforces the implementation of a static method "from_form(form)" which is supposed to take a form and create the
+    form wrapper sub class from that (backward direction)
+
+    GENERAL STRUCTURE OF A COMMANDING FORM
+    A CommandingForm wrapper creates a Form object, which is then supposed to be sent over the network. This Form has
+    the basic structure:
+    - Title: The title tells which type CommandingForm has created the Form, by a string in caps
+    - Body: The body specifies general information in dictionary like format, separated by newline characters. Each
+      each line in the body is separated by a ':' character between the key and the value of the dict like relation.
+      This also implicates, that a value in the body cannot possibly contain a ':' character!
+    - Appendix: This is a python dictionary object, serialized, and can contain everything possible according to the
+      limitations of the encoder and is absolutely up to the specific sub class
+
+    Attributes:
+        form: The actual Form object, that has to be created to be sent over the network
+        _spec: The dict containing all the attributes
+    """
     def __init__(self, spec_dict):
         self._spec = spec_dict
         # Adding the title title of the form to the spec dict
@@ -537,7 +588,9 @@ class CommandingForm:
 
 
 class CommandForm(CommandungForm):
-
+    """
+    This is a sub class to the CommandingForm base class
+    """
     def __init__(self, command, pos_args=[], kw_args={}, return_mode="reply", error_mode="reply"):
         # Creating dictionary, which holds the parameters of the object
         spec = {
@@ -695,6 +748,134 @@ class CommandForm(CommandungForm):
         The string command name of the command to be executed
         """
         return self["command_name"]
+
+    def __str__(self):
+        # TODO: Write str method for COmmand Form
+        pass
+
+    @staticmethod
+    def from_form(form):
+        """
+        This function takes a Form object and first checks if it is actually meant to be CommandForm, if it is
+        all the important parameters are being exrtacted from the Form and a CommandForm wrapper is created from
+        those parameters.
+        Args:
+            form: The Form object to turn into a CommandForm
+
+        Returns:
+        The CommandForm object from the form
+        """
+        # Checking if the form even is a Form
+        CommandForm._check_form(form)
+        # Checking if the form is even meant to be a commanding form
+        CommandForm._check_title(form)
+
+        # Getting the command name and the error and return mode from the body by using a dict, that was created from
+        # the body string, by applying the CommandForm rules for creation
+        body_dict = CommandForm._procure_body_dict(form)
+        command_name = body_dict["command"]
+        error_mode = body_dict["error_mode"]
+        return_mode = body_dict["return_mode"]
+
+        # Getting the pos and the kw args
+        pos_args, kw_args = CommandForm._procure_args(form)
+
+        # Creating the CommandForm object from that and returning that
+        command_form = CommandForm(command_name, pos_args, kw_args, error_mode=error_mode, return_mode=return_mode)
+        return command_form
+
+    @staticmethod
+    def _check_form(form):
+        """
+        This function checks if the object passed is actually a Form and raises an error if not so.
+        Raises:
+            TypeError: In case the given object is not a Form
+        Args:
+            form: The object to test
+
+        Returns:
+        void
+        """
+        if not isinstance(form, Form):
+            raise TypeError("The passed object is not a Form!")
+
+    @staticmethod
+    def _check_title(form):
+        """
+        For a given Form object this function will check, if the Form is meant to be a CommandForm, by checking what
+        the title says. (For a CommandForm the title is supposed to say 'COMMAND').
+        Raises:
+            ValueError: In case the given Form is not supposed to be a CommandForm
+        Args:
+            form: The Form object to bec checked
+
+        Returns:
+        void
+        """
+        if form.title != "COMMAND":
+            raise ValueError("The given form is NOT a COMMAND form")
+
+    @staticmethod
+    def _procure_body_dict(form):
+        """
+        This function takes a Form object as input and then attempts to turn the body into a dictionary, by
+        interpreting the individual lines of the body string as key value pairs of strings, which are separated by
+        a ':' character. Thus if the given Form ought to be a valid command form, each line in the body has to have
+        exactly one of these separation character.
+        The resulting dict will have string keys and string values only.
+        Raises:
+            ValueError: In case there is not exactly on ':' character in a line
+        Args:
+            form: The Form object, whose body is to be turned into a dict
+
+        Returns:
+        A dict of the Form's body, which contains items with string keys and string values
+        """
+        body_dict = {}
+
+        # Turning the body of the form into a dict in the way of taking each line of the line list as a key value pair
+        # separated by the ':' character
+        for line in form.body_list:
+            line_split = line.split(":")
+
+            # Checking if there actually is exactly one separation character
+            if len(line_split) != 2:
+                raise ValueError("The body of command form has to be separated by exactlky one ':' character")
+
+            # Adding the key value tuple as item to the dict
+            body_dict[line_split[0]] = line_split[1]
+
+        return body_dict
+
+    @staticmethod
+    def _procure_args(form):
+        """
+        This function first checks if the appendix of the given form is a dict, as it is supposed to be for a
+        commanding form and then it takes the pos args list and the kw args dict out of the appandix dict and
+        returns those two objects in a tuple with the pos args first and the kw args second.
+        Raises:
+            ValueError: in case the appendix of the Form is not a dictionary
+            ValueError: in case the appendix dict does not contain either pos args or kw args
+        Args:
+            form: The Form object to be cinverted into CommandForm and for which the args ought to be returned
+
+        Returns:
+        The tuple consisting of the pos args and the kw args tuple
+        """
+        # Checking if the type of the appendix is actually a dict
+        if not isinstance(form.appendix, dict):
+            raise ValueError("The appendix of the command form is not a dict")
+
+        # Getting the pos args and the kw args form that dict and putting them into a tuple
+        try:
+            pos_args = form.appendix["pos_args"]
+            kw_args = form.appendix["kw_args"]
+
+            arg_tuple = (pos_args, kw_args)
+            return arg_tuple
+
+        except KeyError:
+            raise ValueError("The appendix of the command form does not contain the args")
 
 
 class ReturnForm(CommandingForm):
