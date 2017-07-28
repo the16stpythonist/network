@@ -349,6 +349,38 @@ class CommandungForm:
         """
         raise NotImplementedError()
 
+    @staticmethod
+    def _check_form(form):
+        """
+        This function checks if the object passed is actually a Form and raises an error if not so.
+        Raises:
+            TypeError: In case the given object is not a Form
+        Args:
+            form: The object to test
+
+        Returns:
+        void
+        """
+        if not isinstance(form, Form):
+            raise TypeError("The passed object is not a Form!")
+
+    @staticmethod
+    def _check_title(form, title):
+        """
+        For a given Form object, this function will check if the title of that form matches the string given as the
+        title, that is supposed to be
+        Raises:
+            ValueError: In case the given Form is not supposed to be a CommandForm
+        Args:
+            form: The Form object to be checked
+            title: The string, which is supposed to be the title of the given form
+
+        Returns:
+        void
+        """
+        if form.title != title:
+            raise ValueError("The given form is NOT a '{}' form".format(title))
+
     def _check_spec(self):
         """
         This method checks the type of the spec dict in the way, that it raises an erro in case the _spec attribute
@@ -785,37 +817,6 @@ class CommandForm(CommandungForm):
         return command_form
 
     @staticmethod
-    def _check_form(form):
-        """
-        This function checks if the object passed is actually a Form and raises an error if not so.
-        Raises:
-            TypeError: In case the given object is not a Form
-        Args:
-            form: The object to test
-
-        Returns:
-        void
-        """
-        if not isinstance(form, Form):
-            raise TypeError("The passed object is not a Form!")
-
-    @staticmethod
-    def _check_title(form):
-        """
-        For a given Form object this function will check, if the Form is meant to be a CommandForm, by checking what
-        the title says. (For a CommandForm the title is supposed to say 'COMMAND').
-        Raises:
-            ValueError: In case the given Form is not supposed to be a CommandForm
-        Args:
-            form: The Form object to bec checked
-
-        Returns:
-        void
-        """
-        if form.title != "COMMAND":
-            raise ValueError("The given form is NOT a COMMAND form")
-
-    @staticmethod
     def _procure_body_dict(form):
         """
         This function takes a Form object as input and then attempts to turn the body into a dictionary, by
@@ -878,76 +879,59 @@ class CommandForm(CommandungForm):
             raise ValueError("The appendix of the command form does not contain the args")
 
 
-class ReturnForm(CommandingForm):
+class ReturnForm(CommandungForm):
 
     def __init__(self, return_value):
-        if isinstance(return_value, Form):
-            CommandingForm.__init__(self, return_value)
-            self.check_type()
-            self.return_value = self.procure_return_value()
-        else:
-            self.return_value = return_value
-            self.return_type = self.procure_return_type_string()
-            form = self.build_form()
-            CommandingForm.__init__(self, form)
 
-    def procure_form_body(self):
-        """
-        This method creates the form body list with one entry and that being the string of the return type
-        Returns:
-        The list with the body string lines
-        """
-        body_string = ':'.join(["type", str(self.return_type)])
-        return [body_string]
+        spec = {
+            "return_value": return_value,
+            "return_type": type(return_value)
+        }
+        CommandungForm.__init__(self, spec)
 
-    def procure_form_appendix(self):
-        """
-        This method creates a dictionary with one entry being the return value of this object
-        Returns:
-        The assembled dictionary as the appendix of the form
-        """
+    def procure_body(self):
+        line_string = ':'.join(["type", str(self.return_type)])
+        return [line_string]
+
+    def procure_appendix(self):
         return {"return": self.return_value}
 
-    def procure_return_value(self):
-        """
-        This method will extract the return value from the underlying form. The return value object is supposed to be
-        stored in the entry with the key 'return'
-        Returns:
-        The object which is supposed to be the return
-        """
-        self.check_appendix()
-        return_value = self.appendix["return"]
-        return return_value
+    @property
+    def return_value(self):
+        return self["return_value"]
 
-    def procure_return_type_string(self):
-        """
-        This method will get the string format of the type of the return value
-        Returns:
-        The string of the type of the return value object
-        """
-        return_type = self.procure_return_type()
-        return str(return_type)
+    @property
+    def return_type(self):
+        return self["return_type"]
 
-    def procure_return_type(self):
-        """
-        This method will get the type of the return value of the return form object
-        Returns:
-        The type object for the type of the return form object
-        """
-        return_type = type(self.return_value)
-        return return_type
+    def __str__(self):
+        pass
 
-    def check_appendix(self):
-        """
-        This method checks if the appendix of the given form is actually a dictionary object and if that dictionary
-        contains an entry with the key "return" as it should do
-        Raises:
-            TypeError: In case the dictionary is not how it should be
-        Returns:
-        void
-        """
-        if not isinstance(self.appendix, dict) or 'return' not in self.appendix.keys():
-            raise TypeError("The appendix has to be a dict!")
+    @staticmethod
+    def from_form(form):
+        # Checking if the passed object is a form
+        ReturnForm._check_form(form)
+        # Checking if the given form is actually meant to be a return form by checking the title
+        ReturnForm._check_title(form, "RETURN")
+
+        # Getting the return value from the form
+        return_value = ReturnForm._procure_return_value(form)
+        # Creating the return form wrapper from that value and returning that
+        return_form = ReturnForm(return_value)
+
+        return return_form
+
+    @staticmethod
+    def _procure_return_value(form):
+        # Checking if the form actually has a dictionary as appendix
+        if not isinstance(form.appendix, dict):
+            raise ValueError("The appendix of the given form is not a dict")
+
+        # Getting the return value from that dict
+        try:
+            return form.appendix["return"]
+        except KeyError:
+            raise ValueError("The appendix dict of the form does not contain return value")
 
 
 class ErrorForm(CommandingForm):
