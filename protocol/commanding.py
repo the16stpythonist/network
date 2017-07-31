@@ -880,9 +880,11 @@ class CommandForm(CommandungForm):
 
 
 class ReturnForm(CommandungForm):
-
+    """
+    pass
+    """
     def __init__(self, return_value):
-
+        # Creating the dict with all the attributes, that define the object
         spec = {
             "return_value": return_value,
             "return_type": type(return_value)
@@ -890,18 +892,44 @@ class ReturnForm(CommandungForm):
         CommandungForm.__init__(self, spec)
 
     def procure_body(self):
+        """
+        This creates the body of the form as a list of string entries, each representing a line in the body string.
+        There will only be one line, which is the type of the return value.
+
+        Returns:
+        The list with the line string(s)
+        """
         line_string = ':'.join(["type", str(self.return_type)])
         return [line_string]
 
     def procure_appendix(self):
+        """
+        This method will create the appendix of the form from the return value given, by simply putting it into the
+        appendix dict with the key 'return'.
+
+        Returns:
+        A dictionary with a single entry
+        """
         return {"return": self.return_value}
 
     @property
     def return_value(self):
+        """
+        The return value is whatever value passed to the constructor of the return form. It has to be appenidx
+        encoded. Which means per form standard its either about in type or a collection of such.
+
+        Returns:
+        The return value, whatever that may be
+        """
         return self["return_value"]
 
     @property
     def return_type(self):
+        """
+        The return type is a Type object, describing the type of the return value
+        Returns:
+        A type object
+        """
         return self["return_type"]
 
     def __str__(self):
@@ -909,6 +937,17 @@ class ReturnForm(CommandungForm):
 
     @staticmethod
     def from_form(form):
+        """
+        This function first checks if the passed value is a Form object. In case it is, it is also checked if that
+        form is actually a return form, by checking the title to be "RETURN". Then the actual return value is being
+        extracted from the form's appendix and then a new ReturnForm wrapper object is being created from that return
+        value and is being returned.
+        Args:
+            form: The Form to be wrapped by the ReturnForm object
+
+        Returns:
+        The ReturnForm created from the Form
+        """
         # Checking if the passed object is a form
         ReturnForm._check_form(form)
         # Checking if the given form is actually meant to be a return form by checking the title
@@ -923,6 +962,17 @@ class ReturnForm(CommandungForm):
 
     @staticmethod
     def _procure_return_value(form):
+        """
+        This function takes a Form object and first checks if the appendix has the correct type, which would be a
+        dictionary for all CommandingForm subclasses and then it will access the "return" element of the dict to get
+        the return value, that is supposed to be transmitted with the Form. An error will be risen in case that
+        element is not in the dict
+        Args:
+            form: The Form from which the return value is supposed to be extracted
+
+        Returns:
+        The return value whatever type that may be (It has to be appendix encoded)
+        """
         # Checking if the form actually has a dictionary as appendix
         if not isinstance(form.appendix, dict):
             raise ValueError("The appendix of the given form is not a dict")
@@ -934,99 +984,142 @@ class ReturnForm(CommandungForm):
             raise ValueError("The appendix dict of the form does not contain return value")
 
 
-class ErrorForm(CommandingForm):
+class ErrorForm(CommandungForm):
+    """
 
+    """
     def __init__(self, exception):
-        if isinstance(exception, Exception):
-            self.exception = exception
-            form = self.build_form()
-            CommandingForm.__init__(self, form)
-        elif isinstance(exception, Form):
-            CommandingForm.__init__(self, exception)
-            self.check_type()
-            self.exception = self.procure_exception()
-        else:
-            raise TypeError("The Error form has to be passed either form or exception object!")
+        # Creating the spec dict with the actual exception object, the string name and the string message
+        spec = {
+            "exception": exception,
+            "exception_type": self._procure_exception_name(exception),
+            "exception_message": self._procure_exception_message(exception)
+        }
+        # Init super class with the created spec
+        CommandungForm.__init__(self, spec)
 
-    def procure_form_appendix(self):
-        #TODO: CHANGE THE WHOLE ERROR FORM CONCEPT
+    def procure_appendix(self):
         """
-        This method will create the appendix of the form, which is supposed to represent this object. If the
-        appendix encoder used for the form is able to encode the exception object itself a dictionary will be sent,
-        that only has ine item with the key 'error' and tge value being the exception object. If the encoder is not
-        able to serialize the exception, an empty dict will be used as appendix
-        Returns:
-        dict
-        """
-        if False:
-            return {"error": self.exception}
-        else:
-            return {}
+        This method created the appendix of the form as an empty dictionary, because in the current version of the
+        commanding protocol, the appendix of the form is not being used for the error form.
 
-    def procure_form_body(self):
-        """
-        This method will create the body of a form, which is supposed to represent this object, from the exception
-        name of the exception, that was passed to the object for construction.
         Returns:
-        The list containing
+        An empty dict
         """
-        # Getting the name of the exception
-        exception_name = self.procure_exception_name()
-        exception_message = self.procure_exception_message().replace("\n", "")
-        exception_message = exception_message.replace(":", ";")
-        name_line = self.assemble_body_line("name", exception_name)
-        message_line = self.assemble_body_line("message", exception_message)
-        return [name_line, message_line]
+        return {}
 
-    def procure_exception_name(self):
+    def procure_body(self):
         """
-        This method extracts the exception name from the exception attribute of this class and then returns the string
-        name of the exception class
+        This method creates the body string list for the form from the information that have been passed to the
+        constructor and are subject of this object, which would be the exception to transmit. The necessary information
+        about the error will be transmitted in two body lines, one being the 'name', which is the string name of the
+        class, from which the exception has been instanced and the other being the 'message', the string giving more
+        information about the error, where and why it occurred.
+        Examples:
+            One example for a body string list for error form:
+            ['name:ValueError', 'message:The integer has to be in the range from 0 to 128']
+
         Returns:
-        The string name of the exception
+        The list of strings for the body of the form
         """
-        exception_class = self.exception.__class__
+        # Creating the two lines with the name of the exception and the message
+        body_lines = [
+            "name:{}".format(self.exception_class_name),
+            "message:{}".format(self._procure_exception_message_line())
+        ]
+        return body_lines
+
+    def _procure_exception_message_line(self):
+        """
+        This method creates the string version of the exception message, that can be put as a line in the body of
+        the form. The Commanding protocol works by separating items of the body by new lines and separating the key
+        from the value with a ':' character, thus this method removes those character from the message string and
+        returns that safe string.
+
+        Returns:
+        The string of the error message, safe for use in the body of the form
+        """
+        # Getting the string of the exception message
+        message_line = self.exception_message
+
+        # There shall be no newline character and no ":" due to the rules of the commanding protocol
+        message_line = message_line.replace(":", ";")
+        message_line = message_line.replace("\n", " ")
+
+        return message_line
+
+    @staticmethod
+    def _procure_exception_message(exception):
+        """
+        This function returns the message string of the passed exception object. The function first checks of the
+        passed object is a exception will raise error if not.
+        Raises:
+            ValueError: in case the passed object 'exception' is not an Exception
+        Args:
+            exception: The Exception, whose message to be returned
+
+        Returns:
+        The string message of the exception
+        """
+        # Checking if the passed object is actually a exception
+        if not isinstance(exception, Exception):
+            raise ValueError
+
+        # The message of a exception can be gotten simply by calling the string conversion on the exception object
+        exception_message = str(exception)
+        return exception_message
+
+    @staticmethod
+    def _procure_exception_name(exception):
+        """
+        This function returns the name of the Exception class from which the passed exception object has been
+        instanced. In case the passed object is not a exception, an error will be risen.
+        Args:
+            exception: The Exception object for which to return the name of the class from which it has originated
+
+        Returns:
+        The string name of the class of the exception
+        """
+        # Checking if the passed object is actually a exception
+        if not isinstance(exception, Exception):
+            raise ValueError("The passed object is not an exception, thus no exception name")
+
+        # Getting the class of the object first and then returning the name attribute of that class
+        exception_class = exception.__class__
         exception_name = exception_class.__name__
         return exception_name
 
-    def procure_exception_message(self):
+    @property
+    def exception(self):
         """
-        This method will get the exception message from the exception object, that is the attribute of this object
-        Returns:
-        The string exception message
-        """
-        exception_message = str(self.exception)
-        return exception_message
+        The exception property returns the actual exception object, represented by this form wrapper.
 
-    def procure_exception(self):
-        """
-        This method will create an exception object from the data given by the underlying form object. In case there is
-        only an empty appendix (which means that the appendix encoder cannot encode exception objects) a new exception
-        object will be created by dynamically interpreting the error name and message in the body of the form. In case
-        there is an appendix using the exception object stored in the appendix to return
         Returns:
-        An exception object, as specified by the form
+        The exception, that is subject to this object
         """
-        if len(self.appendix) == 0:
-            # Creating the python expression of creating a new exception object as a string expression from the name
-            # and message of the exception from the body
-            eval_string = self.procure_exception_eval_string()
-            # Dynamically interpreting that string and retunring the new exception object
-            return eval(eval_string)
-        else:
-            return self.appendix["error"]
+        return self["exception"]
 
-    def procure_exception_eval_string(self):
+    @property
+    def exception_class_name(self):
         """
-        This method will create a string expression, that represents a python source code statement of creating a new
-        exception object with using the excepetion name, specified by the body as the class to create and the message
-        given in the body as the string parameter for the exception object creation.
+        The exception class name is the string name of the class, from which the actual exception has been instanced
+        and therefore identifies which type of exception occurred.
+
         Returns:
-        A string, that is a python statement
+        The string class name of the exception, which is subject to this object
         """
-        exception_name = self.spec["name"]
-        exception_message = self.spec["message"]
-        return ''.join([exception_name, '("', exception_message, '")'])
+        return self["exception_type"]
+
+    @property
+    def exception_message(self):
+        """
+        The exception message is the string of the message, which is usually being printed to the user to display the
+        origin and reason for the occurred error.
+
+        Returns:
+        The string of the message
+        """
+        return self["exception_message"]
 
 
 class CommandingBase(threading.Thread):
