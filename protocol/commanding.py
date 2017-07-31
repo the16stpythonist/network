@@ -393,6 +393,38 @@ class CommandungForm:
         if not isinstance(self._spec, dict):
             raise TypeError("The spec of CommandingForm has to be dict")
 
+    @staticmethod
+    def _procure_body_dict(form):
+        """
+        This function takes a Form object as input and then attempts to turn the body into a dictionary, by
+        interpreting the individual lines of the body string as key value pairs of strings, which are separated by
+        a ':' character. Thus if the given Form ought to be a valid command form, each line in the body has to have
+        exactly one of these separation character.
+        The resulting dict will have string keys and string values only.
+        Raises:
+            ValueError: In case there is not exactly on ':' character in a line
+        Args:
+            form: The Form object, whose body is to be turned into a dict
+
+        Returns:
+        A dict of the Form's body, which contains items with string keys and string values
+        """
+        body_dict = {}
+
+        # Turning the body of the form into a dict in the way of taking each line of the line list as a key value pair
+        # separated by the ':' character
+        for line in form.body_list:
+            line_split = line.split(":")
+
+            # Checking if there actually is exactly one separation character
+            if len(line_split) != 2:
+                raise ValueError("The body of command form has to be separated by exactlky one ':' character")
+
+            # Adding the key value tuple as item to the dict
+            body_dict[line_split[0]] = line_split[1]
+
+        return body_dict
+
 
 class CommandingForm:
     """
@@ -817,38 +849,6 @@ class CommandForm(CommandungForm):
         return command_form
 
     @staticmethod
-    def _procure_body_dict(form):
-        """
-        This function takes a Form object as input and then attempts to turn the body into a dictionary, by
-        interpreting the individual lines of the body string as key value pairs of strings, which are separated by
-        a ':' character. Thus if the given Form ought to be a valid command form, each line in the body has to have
-        exactly one of these separation character.
-        The resulting dict will have string keys and string values only.
-        Raises:
-            ValueError: In case there is not exactly on ':' character in a line
-        Args:
-            form: The Form object, whose body is to be turned into a dict
-
-        Returns:
-        A dict of the Form's body, which contains items with string keys and string values
-        """
-        body_dict = {}
-
-        # Turning the body of the form into a dict in the way of taking each line of the line list as a key value pair
-        # separated by the ':' character
-        for line in form.body_list:
-            line_split = line.split(":")
-
-            # Checking if there actually is exactly one separation character
-            if len(line_split) != 2:
-                raise ValueError("The body of command form has to be separated by exactlky one ':' character")
-
-            # Adding the key value tuple as item to the dict
-            body_dict[line_split[0]] = line_split[1]
-
-        return body_dict
-
-    @staticmethod
     def _procure_args(form):
         """
         This function first checks if the appendix of the given form is a dict, as it is supposed to be for a
@@ -1120,6 +1120,16 @@ class ErrorForm(CommandungForm):
         The string of the message
         """
         return self["exception_message"]
+
+    @staticmethod
+    def from_form(form):
+        ErrorForm._check_form(form)
+        ErrorForm._check_title(form, "ERROR")
+
+    @staticmethod
+    def _procure_exception_info(form):
+        body_lines = form.body_list
+        body_lines.split
 
 
 class CommandingBase(threading.Thread):
