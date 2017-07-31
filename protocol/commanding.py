@@ -1121,15 +1121,32 @@ class ErrorForm(CommandungForm):
         """
         return self["exception_message"]
 
+    def __str__(self):
+        pass
+
     @staticmethod
     def from_form(form):
+        """
+        This function creates a new ErrorForm wrapper object from an already existing form, created from a ErrorForm.
+        The name and the message string of the error in the forms body are being used to create a dynamic eval statement
+        of a new created Exception message of the type defined by the name string and the given message.
+        The function will also check first if the passed object is even a form and if this form is actually meant to be
+        an ErrorForm
+        Args:
+            form: The Form object to be turned back into the ErrorForm wrapper
+
+        Returns:
+        The created ErrorForm object
+        """
         ErrorForm._check_form(form)
         ErrorForm._check_title(form, "ERROR")
 
-    @staticmethod
-    def _procure_exception_info(form):
-        body_lines = form.body_list
-        body_lines.split
+        body_dict = ErrorForm._procure_body_dict(form)
+        error_name = body_dict["name"]
+        error_message = body_dict["message"]
+
+        exception = eval("""{}("{}")""".format(error_name, error_message))
+        return ErrorForm(exception)
 
 
 class CommandingBase(threading.Thread):
