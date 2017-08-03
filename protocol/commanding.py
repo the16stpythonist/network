@@ -120,7 +120,7 @@ class CommandContext:
         return time.time()
 
 
-class CommandungForm:
+class CommandingForm:
     """
     INTERFACE
     The CommandingForm is the base class for all the Form wrappers used in the CommandingProtocol.
@@ -266,7 +266,7 @@ class CommandungForm:
         The boolean value of whether or not the two objects are equal
         """
         # Checking if the compared object is also if the type CommandingForm or Form
-        if isinstance(other, CommandungForm):
+        if isinstance(other, CommandingForm):
 
             # Simply checking if the two spec dictionaries are the same
             return dict(self) == dict(other)
@@ -425,233 +425,7 @@ class CommandungForm:
 
         return body_dict
 
-
-class CommandingForm:
-    """
-    INTERFACE
-    The CommandingForm is the base class for all the Form wrappers used in the CommandingProtocol.
-
-    The Form wrappers have the overall purpose of creating a form according to their type and the parameters they have
-    been given, which the form is supposed to contain.
-
-    This base class has to be passed the finished Form object, which has been created during construction and the
-    property methods for accessing the Form attributes like title, body, appendix directly are provided by this super
-    class already.
-    Furthermore this base class already implements the method, with which the form can be created, but for this
-    creation of the form a title, body and appendix are needed, thus this class also enforces sub classes, inheriting
-    from it to implement the methods, which assemble the correct title, body and apppendix according to the parameters
-    they have been passed.
-    At last this base class also provides the functionality of creating the 'spec' dict directly from the Form it has
-    been passed. The spec dict is a representation if the body of the Form, where each entry is one line in the body
-    string, the key being the string before the ':' separator and the value being the string adter until the new line.
-
-    GENERAL STRUCTURE OF A COMMANDING FORM
-    A CommandingForm wrapper creates a Form object, which is then supposed to be sent over the network. This Form has
-    the basic structure:
-    - Title: The title tells which type CommandingForm has created the Form, by a string in caps
-    - Body: The body specifies general information in dictionary like format, separated by newline characters. Each
-      each line in the body is separated by a ':' character between the key and the value of the dict like relation.
-      This also implicates, that a value in the body cannot possibly contain a ':' character!
-    - Appendix: This is a python dictionary object, serialized, and can contain everything possible according to the
-      limitations of the encoder and is absolutely up to the specific sub class
-
-    Attributes:
-        form: The actual Form object, that has to be created to be sent over the network
-        spec: The dictionary, which contains an entry for every line in the body of the Form, with the value being the
-            sub string before the separator ':' occurred and the value being the sub string after
-    """
-    def __init__(self, form):
-        self.form = form
-        # The spec dict contains all the key value pairs specified in the body 
-        self.spec = self.procure_body_dict_raw()
-
-    def build_form(self):
-        """
-        This method will be used by all the subclasses to create a form object, that represents the information of
-        the specialized commanding form, in the case, that the subclasses are not created by passing them a form upon
-        which they are based, but rather the more specific parameter set, that describes their behaviour.
-        Although for this to work, the sub classes of this class have to implement methods, that create and return the
-        body list of strings and the appendix data structure from their individual data set.
-        Returns:
-        The form object, that was created as a representation of the complex and specialized data set describing an
-        individual sub class of this base class form representation
-        """
-        title = self.procure_form_title()
-        body = self.procure_form_body()
-        appendix = self.procure_form_appendix()
-        form = Form(title, body, appendix)
-        return form
-
-    def procure_form_title(self):
-        """
-        This method creates the title of the form, that is supposed to represent the subclasses of the CommandingForm.
-        The title is per protocol defined as the type of the object, which is a upper case noun briefly describing
-        the purpose of the class
-        Returns:
-        The string of the title of the form to be created from the object, which is the type string of the class
-        """
-        return self.type
-
-    def procure_form_body(self):
-        """
-        HAS TO BE OVERWRITTEN BY SUB CLASS
-        This method will have to create and return a list of strings, that describes the body lines of a form object,
-        that represent the subclass.
-        Returns:
-        The list of strings for the body lines of the form to be created from the data of the sub class object
-        """
-        raise NotImplementedError("This method has to be overwritten by the sub class!")
-
-    def procure_form_appendix(self):
-        """
-        HAS TO BE OVERWRITTEN BY SUB CLASS
-        This method will have to create and return a data structure, that can be assignes as the appendix of a form and
-        that per protocol defines the sub class creating it as that form.
-        Returns:
-        The appendix data structure
-        """
-        raise NotImplementedError("This method has to be overwritten by the sub class!")
-
-    def procure_body_dict_raw(self):
-        """
-        This method will return a dictionary, which has one entry for every line in the body string, whose key is the
-        sub string before the split character ':' has occurred and the value being the substring after that character.
-        Returns:
-        The dictionary which assignes string keys to string values
-        """
-        body_dict = {}
-        # Getting the list of split lists of the body string
-        body_list_split = self.procure_body_lines_split()
-        for line_list in body_list_split:
-            body_dict[line_list[0]] = line_list[1]
-        return body_dict
-
-    def procure_body_lines_split(self):
-        """
-        This method returns a list of lists, with one sub list for each line in the body string. The sub lists are the
-        split lists of the lines by the ':' character and each sub list therefore contains two strings.
-        Raises:
-            ValueError: In case the formatting of the form is wrong and there is either no ':' or more than one in
-                a line
-        Returns:
-        A list of lists, where each sub list has two string items
-        """
-        body_lines = self.body.split("\n")
-        body_lines_split = []
-        for line in body_lines:
-            split_line = line.split(":")
-            # In case the line does not have exactly one ':' character raising error, because invalid format
-            if len(split_line) != 2:
-                raise ValueError("The CommandingProtocol dictates, that there is exactly one ':' per line in body!")
-            body_lines_split.append(split_line)
-        return body_lines_split
-
-    def procure_body_lines(self):
-        """
-        This method will return a list os strings, where each string is one line of the body string. A line is defined
-        as the sum if characters until a new line character.
-        Returns:
-        The list of line strings for the body
-        """
-        body_lines = self.body.split("\n")
-        return body_lines
-
-    def check_spec_key(self, key):
-        """
-        This method checks if there is a key of the given name in the spec dictionary. In case the key is not part of
-        the dict, an error will be risen.
-        Raises:
-            AttributeError
-        Args:
-            key: The string name of the key to be in the spec dictionary and therefore in the body of the form
-
-        Returns:
-        void
-        """
-        if key not in self.spec.keys():
-            raise AttributeError("The key {} was not specified in the body of the form".format(key))
-
-    def check_type(self):
-        """
-        This method will check if the type of the object matches the type of the form, upon which it is based on
-        Returns:
-        void
-        """
-        if self.title != self.type:
-            raise TypeError("The form is not fit for a {} form type wrap object!".format(self.type))
-
-    @property
-    def type(self):
-        """
-        This method will return the type of the command form subclass. The functionality is purely based on the naming
-        convention of the CommandingForm subclasses, which has to be the type of the form followed by 'Form'. The
-        string of the type will then be returned as all upper case.
-        Examples:
-            If the type of the object would for example be Apple, then per naming convention the subclass would be
-            named 'AppleForm', this class would then return the string 'APPLE', which was extracted from the class name
-        Returns:
-        The upper case string of the type of the subclass
-        """
-        # Getting the class name and removing the Form at the end
-        class_name = self.__class__.__name__
-        type_name = class_name.replace("Form", "")
-        # Making it upper case and then returning it
-        return type_name.upper()
-
-    @property
-    def title(self):
-        """
-        This method is the property getter for the title of the form. It will return the title of the wrapped form
-        Returns:
-        the string title of the form
-        """
-        return self.form.title
-
-    @property
-    def body(self):
-        """
-        This method is the property getter for the body of the form. It will return the body of the wrapped form
-        Returns:
-        The string of the body of the form
-        """
-        return self.form.body
-
-    @property
-    def appendix(self):
-        """
-        This is the property getter if the appendix object of the form. It will return the appendix of the wrapped form
-        Returns:
-        The appendix object of the wrapped form
-        """
-        return self.form.appendix
-
-    @property
-    def appendix_encoder(self):
-        """
-        This is the property getter method of the encoder object, that is responsible for the encoding and decoding
-        of the form object. It will simply return the encoder of the wrappped form
-        Returns:
-        The AppendixEncoder form, with which the form is being made network transmittable
-        """
-        return self.form.appendix_encoder
-
-    @staticmethod
-    def assemble_body_line(key, value):
-        """
-        This method assembles the key and value strings for a line in the body of the form, by joining them with a
-        ':' used as separator
-        Args:
-            key:
-            value:
-
-        Returns:
-
-        """
-        body_line = ':'.join([key, value])
-        return body_line
-
-
-class CommandForm(CommandungForm):
+class CommandForm(CommandingForm):
     """
     This is a sub class to the CommandingForm base class
     """
@@ -667,7 +441,7 @@ class CommandForm(CommandungForm):
 
         # Passing the dict to the constructor of the base class, as it is assigned as the instance attribute _spec
         # there, also base class provides key indexing magic method for the instance with that dict
-        CommandungForm.__init__(self, spec)
+        CommandingForm.__init__(self, spec)
 
     def procure_body(self):
         """
@@ -879,7 +653,7 @@ class CommandForm(CommandungForm):
             raise ValueError("The appendix of the command form does not contain the args")
 
 
-class ReturnForm(CommandungForm):
+class ReturnForm(CommandingForm):
     """
     pass
     """
@@ -889,7 +663,7 @@ class ReturnForm(CommandungForm):
             "return_value": return_value,
             "return_type": type(return_value)
         }
-        CommandungForm.__init__(self, spec)
+        CommandingForm.__init__(self, spec)
 
     def procure_body(self):
         """
@@ -984,7 +758,7 @@ class ReturnForm(CommandungForm):
             raise ValueError("The appendix dict of the form does not contain return value")
 
 
-class ErrorForm(CommandungForm):
+class ErrorForm(CommandingForm):
     """
 
     """
@@ -996,7 +770,7 @@ class ErrorForm(CommandungForm):
             "exception_message": self._procure_exception_message(exception)
         }
         # Init super class with the created spec
-        CommandungForm.__init__(self, spec)
+        CommandingForm.__init__(self, spec)
 
     def procure_appendix(self):
         """
